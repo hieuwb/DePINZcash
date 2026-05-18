@@ -1,0 +1,55 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html,
+  body,
+  #root {
+    height: 100%;
+  }
+  body {
+    -webkit-font-smoothing: antialiased;
+  }
+}
+
+@layer components {
+  .btn {
+    @apply inline-flex items-center justify-center rounded-md px-4 py-2 text-sm font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50;
+  }
+  .btn-primary {
+    @apply btn bg-zcash-gold text-zcash-dark hover:bg-amber-300;
+  }
+  .btn-outline {
+    @apply btn border border-zcash-border bg-transparent text-zcash-text hover:bg-zcash-surface;
+  }
+  .card {
+    @apply rounded-lg border border-zcash-border bg-zcash-surface p-5;
+  }
+  .stat-label {
+    @apply text-xs uppercase tracking-wider text-zcash-subtle;
+  }
+  .stat-value {
+    @apply text-2xl font-semibold text-zcash-text;
+  }
+  .input {
+    @apply w-full rounded-md border border-zcash-border bg-zcash-dark px-3 py-2 text-sm text-zcash-text placeholder:text-zcash-subtle focus:border-zcash-gold focus:outline-none;
+  }
+  .pill {
+    @apply inline-flex items-center rounded-full border border-zcash-border bg-zcash-surface px-2 py-0.5 text-xs text-zcash-subtle;
+  }
+}
+
+/* Override wallet-adapter modal styles to fit our dark theme. */
+.wallet-adapter-button-trigger {
+  background-color: #f4b728 !important;
+  color: #0e0e10 !important;
+}
+.wallet-adapter-modal-wrapper {
+  background-color: #16161a !important;
+  color: #e6e6ea !important;
+}
+.wallet-adapter-modal-title,
+.wallet-adapter-modal-list .wallet-adapter-button {
+  color: #e6e6ea !important;
+}
