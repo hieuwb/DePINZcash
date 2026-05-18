@@ -154,36 +154,35 @@ impl ProofGenerator {
 
     /// Sign the proof to prevent tampering
     fn sign_proof(&self, proof: &Proof) -> Result<String> {
-        use ed25519_dalek::{Keypair, Signature, Signer};
+        use ed25519_dalek::{Signature, Signer, SigningKey};
         use sha2::{Sha256, Digest};
 
         let seed = self.generate_signing_seed();
-        let keypair = Keypair::from_bytes(&seed)
-            .context("Failed to create signing keypair")?;
+        let signing = SigningKey::from_bytes(&seed);
 
         let proof_json = serde_json::to_string(proof)?;
         let mut hasher = Sha256::new();
         hasher.update(proof_json.as_bytes());
         let message = hasher.finalize();
 
-        let signature: Signature = keypair.sign(&message);
+        let signature: Signature = signing.sign(&message);
 
         Ok(hex::encode(signature.to_bytes()))
     }
 
-    /// Generate a signing seed
-    fn generate_signing_seed(&self) -> [u8; 64] {
-        use sha2::{Sha512, Digest};
+    // ed25519-dalek 2.x SigningKey takes a 32-byte secret. Old code used 64 bytes
+    // (Keypair = secret || pubkey); drop the pubkey half.
+    fn generate_signing_seed(&self) -> [u8; 32] {
+        use sha2::{Sha256, Digest};
 
-        let mut hasher = Sha512::new();
-        // Use node_id for signing seed
+        let mut hasher = Sha256::new();
         if let Some(node_id) = &self.config.node_id {
             hasher.update(node_id.as_bytes());
         }
         hasher.update(b"depinzcash_proof");
 
         let hash = hasher.finalize();
-        let mut seed = [0u8; 64];
+        let mut seed = [0u8; 32];
         seed.copy_from_slice(&hash);
         seed
     }
