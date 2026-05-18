@@ -4,13 +4,28 @@ Cargo.lock
 **/*.rs.bk
 *.pdb
 
+# Node
+node_modules/
+web/dist/
+web/.vite/
+web/.env.local
+web/.env.development.local
+web/.env.production.local
+web/tsconfig.tsbuildinfo
+**/tsconfig.tsbuildinfo
+
 # Proofs (user-generated, don't commit)
 proofs/*.json
 !proofs/.gitkeep
 
-# Config (contains wallet addresses)
+# Config (contains wallet addresses + keypairs)
 config/config.json
+config/solana-keypair.json
+config/relay-state.json
 .env
+server/.env
+server/*.sqlite
+server/*.sqlite-*
 
 # OS
 .DS_Store
@@ -31,6 +46,13 @@ logs/
 # Build artifacts
 dist/
 build/
+test_output/
+
+# Claude / claude-flow local state
+.claude/
+.claude-flow/
+**/.claude/
+**/.claude-flow/
 
 # Temporary files
 tmp/
