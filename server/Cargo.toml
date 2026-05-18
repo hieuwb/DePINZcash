@@ -1,0 +1,66 @@
+[package]
+name = "depinzcash-server"
+version = "0.1.0"
+edition = "2021"
+authors = ["DePINZcash Team"]
+description = "Backend API for DePINZcash — verifies Zebra node proofs and distributes SPL rewards on Solana"
+license = "MIT"
+
+[[bin]]
+name = "depinzcash-server"
+path = "src/main.rs"
+
+[lib]
+name = "depinzcash_server"
+path = "src/lib.rs"
+
+[dependencies]
+axum = { version = "0.7", features = ["macros", "tracing"] }
+tokio = { version = "1", features = ["full"] }
+tower = "0.5"
+tower-http = { version = "0.6", features = ["cors", "trace", "limit"] }
+hyper = { version = "1", features = ["server"] }
+
+sqlx = { version = "0.8", default-features = false, features = ["runtime-tokio-rustls", "sqlite", "chrono", "uuid", "macros", "migrate"] }
+
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+serde_with = "3"
+
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter", "json"] }
+
+chrono = { version = "0.4", features = ["serde"] }
+uuid = { version = "1", features = ["v4", "serde"] }
+
+anyhow = "1"
+thiserror = "1"
+
+# Solana signature verification (ed25519 over base58 pubkeys + base58 signatures)
+ed25519-dalek = { version = "2", features = ["std"] }
+bs58 = "0.5"
+
+# Zcash RPC client
+reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls"] }
+
+# Hashing / encoding
+sha2 = "0.10"
+hex = "0.4"
+
+# Misc
+once_cell = "1"
+dotenvy = "0.15"
+rand = "0.8"
+url = "2"
+futures = "0.3"
+
+[dev-dependencies]
+tempfile = "3"
+tokio = { version = "1", features = ["full", "test-util"] }
+http-body-util = "0.1"
+tower = { version = "0.5", features = ["util"] }
+
+[profile.release]
+opt-level = 3
+lto = true
+codegen-units = 1
