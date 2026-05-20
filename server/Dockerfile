@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1.7
 
-FROM rust:1.83-bookworm AS builder
+FROM rust:1.91-bookworm AS builder
 WORKDIR /build
 
 # Cache dependency build by copying manifest first.
