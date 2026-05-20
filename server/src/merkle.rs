@@ -224,4 +224,76 @@ mod tests {
         assert_eq!(a, b);
         assert_ne!(a, c);
     }
+
+    #[test]
+    fn hash_pair_sorted_is_commutative() {
+        // result must be identical regardless of argument order
+        let a = h(3);
+        let b = h(7);
+        assert_eq!(hash_pair_sorted(&a, &b), hash_pair_sorted(&b, &a));
+    }
+
+    #[test]
+    fn four_leaves_all_verify() {
+        let leaves: Vec<[u8; 32]> = (1u8..=4).map(h).collect();
+        let tree = build_tree(&leaves);
+        for (i, leaf) in leaves.iter().enumerate() {
+            assert!(verify_proof(leaf, &tree.proof_for(i), &tree.root), "leaf {i} failed");
+        }
+    }
+
+    #[test]
+    fn eight_leaves_all_verify() {
+        let leaves: Vec<[u8; 32]> = (1u8..=8).map(h).collect();
+        let tree = build_tree(&leaves);
+        for (i, leaf) in leaves.iter().enumerate() {
+            assert!(verify_proof(leaf, &tree.proof_for(i), &tree.root), "leaf {i} failed");
+        }
+    }
+
+    #[test]
+    fn odd_seven_leaves_all_verify() {
+        let leaves: Vec<[u8; 32]> = (1u8..=7).map(h).collect();
+        let tree = build_tree(&leaves);
+        for (i, leaf) in leaves.iter().enumerate() {
+            assert!(verify_proof(leaf, &tree.proof_for(i), &tree.root), "leaf {i} failed");
+        }
+    }
+
+    #[test]
+    fn tampered_intermediate_node_fails_verification() {
+        let leaves: Vec<[u8; 32]> = (1u8..=4).map(h).collect();
+        let tree = build_tree(&leaves);
+        let mut proof = tree.proof_for(0);
+        // flip one bit in the first sibling
+        proof[0][0] ^= 0xff;
+        assert!(!verify_proof(&leaves[0], &proof, &tree.root));
+    }
+
+    #[test]
+    fn empty_proof_only_matches_root_when_single_leaf() {
+        let leaves = vec![h(42)];
+        let tree = build_tree(&leaves);
+        let proof = tree.proof_for(0);
+        assert!(proof.is_empty());
+        assert!(verify_proof(&leaves[0], &proof, &tree.root));
+        // wrong leaf against same empty proof must fail
+        assert!(!verify_proof(&h(99), &proof, &tree.root));
+    }
+
+    #[test]
+    fn leaf_hash_empty_wallet_zero_points() {
+        // must not panic and must be deterministic
+        let a = hash_leaf("", 0);
+        let b = hash_leaf("", 0);
+        assert_eq!(a, b);
+        // different from a non-empty wallet
+        assert_ne!(a, hash_leaf("x", 0));
+    }
+
+    #[test]
+    fn leaf_hash_u64_max_points() {
+        // must not panic
+        let _ = hash_leaf("wallet", u64::MAX);
+    }
 }

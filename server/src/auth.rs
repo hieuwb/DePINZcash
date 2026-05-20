@@ -193,4 +193,139 @@ mod tests {
         assert!(check_nonce("short").is_err());
         assert!(check_nonce("with whitespace inside1234567").is_err());
     }
+
+    #[test]
+    fn decode_pubkey_wrong_length_short() {
+        // 31 bytes — must be rejected
+        let short = bs58::encode([0u8; 31]).into_string();
+        assert!(decode_solana_pubkey(&short).is_err());
+    }
+
+    #[test]
+    fn decode_pubkey_wrong_length_long() {
+        // 33 bytes — must be rejected
+        let long = bs58::encode([0u8; 33]).into_string();
+        assert!(decode_solana_pubkey(&long).is_err());
+    }
+
+    #[test]
+    fn decode_pubkey_invalid_base58() {
+        assert!(decode_solana_pubkey("0OIl!!!!!invalid").is_err());
+    }
+
+    #[test]
+    fn decode_signature_wrong_length_short() {
+        let short = bs58::encode([0u8; 63]).into_string();
+        assert!(decode_signature(&short).is_err());
+    }
+
+    #[test]
+    fn decode_signature_wrong_length_long() {
+        let long = bs58::encode([0u8; 65]).into_string();
+        assert!(decode_signature(&long).is_err());
+    }
+
+    #[test]
+    fn check_timestamp_within_window_is_ok() {
+        let now = Utc::now();
+        assert!(check_timestamp(now, std::time::Duration::from_secs(60)).is_ok());
+    }
+
+    #[test]
+    fn check_timestamp_just_outside_window_errs() {
+        let skew = std::time::Duration::from_secs(300);
+        let just_outside = Utc::now() - Duration::seconds(301);
+        assert!(check_timestamp(just_outside, skew).is_err());
+    }
+
+    #[test]
+    fn check_timestamp_future_just_outside_window_errs() {
+        let skew = std::time::Duration::from_secs(60);
+        let future = Utc::now() + Duration::seconds(61);
+        assert!(check_timestamp(future, skew).is_err());
+    }
+
+    #[test]
+    fn extract_bearer_happy_path() {
+        assert_eq!(extract_bearer(Some("Bearer mytoken123")).unwrap(), "mytoken123");
+    }
+
+    #[test]
+    fn extract_bearer_no_header_is_unauthorized() {
+        assert!(extract_bearer(None).is_err());
+    }
+
+    #[test]
+    fn extract_bearer_missing_prefix_is_unauthorized() {
+        assert!(extract_bearer(Some("mytoken123")).is_err());
+    }
+
+    #[test]
+    fn extract_bearer_empty_token_is_unauthorized() {
+        assert!(extract_bearer(Some("Bearer ")).is_err());
+    }
+
+    #[test]
+    fn generate_auth_token_is_64_hex_chars() {
+        let t = generate_auth_token();
+        assert_eq!(t.len(), 64);
+        assert!(t.chars().all(|c| c.is_ascii_hexdigit()));
+    }
+
+    #[test]
+    fn generate_auth_token_is_unique() {
+        let a = generate_auth_token();
+        let b = generate_auth_token();
+        assert_ne!(a, b, "two tokens must not collide");
+    }
+
+    #[test]
+    fn registration_message_format_is_deterministic() {
+        let msg = registration_message("wallet1", "nonce1", "2024-01-01T00:00:00Z", "zebra-full", "mainnet", "");
+        let s = std::str::from_utf8(&msg).unwrap();
+        let lines: Vec<&str> = s.split('\n').collect();
+        assert_eq!(lines[0], "depinzcash:register:v1");
+        assert_eq!(lines[1], "wallet1");
+        assert_eq!(lines[2], "nonce1");
+        assert_eq!(lines[6], ""); // empty label
+        assert!(s.ends_with('\n'));
+    }
+
+    #[test]
+    fn proof_message_format_contains_all_fields() {
+        let msg = proof_message("wallet", "node-1", 100, "abc123", "2024-01-01T00:00:00Z", "nonce");
+        let s = std::str::from_utf8(&msg).unwrap();
+        let lines: Vec<&str> = s.split('\n').collect();
+        assert_eq!(lines[0], "depinzcash:proof:v1");
+        assert_eq!(lines[3], "100");
+        assert_eq!(lines[4], "abc123");
+    }
+
+    #[test]
+    fn verify_signature_wrong_message_fails() {
+        let signing = fresh_signing_key();
+        let verifying = signing.verifying_key();
+        let wallet = bs58::encode(verifying.to_bytes()).into_string();
+        let sig = signing.sign(b"original");
+        let sig_b58 = bs58::encode(sig.to_bytes()).into_string();
+        // verify against different message
+        assert!(verify_solana_signature(&wallet, b"tampered", &sig_b58).is_err());
+    }
+
+    #[test]
+    fn nonce_exactly_16_chars_is_valid() {
+        assert!(check_nonce("abcdef1234567890").is_ok());
+    }
+
+    #[test]
+    fn nonce_exactly_128_chars_is_valid() {
+        let s = "a".repeat(128);
+        assert!(check_nonce(&s).is_ok());
+    }
+
+    #[test]
+    fn nonce_129_chars_is_invalid() {
+        let s = "a".repeat(129);
+        assert!(check_nonce(&s).is_err());
+    }
 }
