@@ -48,6 +48,12 @@ export function Home() {
             settle to <strong className="text-zcash-text">$ZePIN</strong> on Solana every snapshot
             cycle. Run a node, sign with your Solana wallet, earn.
           </p>
+          <div className="rounded-md border border-zcash-gold/40 bg-zcash-gold/10 px-3 py-2 text-sm">
+            <span className="font-semibold text-zcash-gold">Launch bonus:</span>{" "}
+            <span className="text-zcash-text">
+              ~$40 in $ZePIN for registering a node and keeping it online for 24 hours.
+            </span>
+          </div>
           <div className="flex flex-wrap gap-2">
             <Link to="/register" className="btn-primary">Register a node</Link>
             <Link to="/leaderboard" className="btn-outline">View leaderboard</Link>
@@ -103,24 +109,61 @@ export function Home() {
           </h2>
           <p className="text-sm text-zcash-subtle">
             DePINZcash has zero proprietary protocol or client to install. You run the{" "}
-            <strong className="text-zcash-text">official Zebra full node</strong> from the
-            Zcash Foundation — exactly the same software the network already uses — and the
-            relay CLI just signs and reports its state.
+            <strong className="text-zcash-text">official Zebra full node</strong> or{" "}
+            <strong className="text-zcash-text">lightwalletd</strong> server — both from the
+            Zcash Foundation, exactly the software the network already uses — and the relay CLI
+            just signs and reports its state.{" "}
+            <span className="text-zcash-text">
+              New to running nodes?{" "}
+              <Link to="/run-lightwalletd" className="text-zcash-gold underline hover:text-amber-300">
+                We recommend starting with lightwalletd
+              </Link>
+              .
+            </span>
           </p>
         </div>
         <div className="flex flex-wrap gap-2 md:shrink-0">
-          <a
-            href="https://github.com/ZcashFoundation/zebra"
-            target="_blank"
-            rel="noreferrer"
-            className="btn-primary"
-          >
-            Download Zebra ↗
-          </a>
+          <Link to="/run-lightwalletd" className="btn-primary">
+            Start with lightwalletd
+          </Link>
           <Link to="/run-node" className="btn-outline">
-            Setup guide
+            Full Zebra node
           </Link>
         </div>
+      </section>
+
+      <section className="grid gap-4 md:grid-cols-2">
+        <article className="card flex flex-col gap-3">
+          <div className="flex items-center justify-between">
+            <h3 className="text-base font-semibold">Relay CLI mode</h3>
+            <span className="inline-flex items-center gap-1 rounded-full border border-zcash-success/40 bg-zcash-success/10 px-2 py-0.5 text-[10px] uppercase tracking-wider text-emerald-300">
+              <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" /> Active now
+            </span>
+          </div>
+          <p className="text-sm text-zcash-subtle">
+            Run our small <code className="text-zcash-text">depinzcash-relay</code> binary
+            on the same machine as Zebra. It signs and submits proofs of node state to the
+            server every 5 minutes. Open source, fully auditable.
+          </p>
+          <Link to="/run-node" className="text-sm text-zcash-gold hover:underline">
+            Setup instructions →
+          </Link>
+        </article>
+
+        <article className="card flex flex-col gap-3">
+          <div className="flex items-center justify-between">
+            <h3 className="text-base font-semibold">Exposed RPC mode</h3>
+            <span className="inline-flex items-center gap-1 rounded-full border border-zcash-warn/40 bg-zcash-warn/10 px-2 py-0.5 text-[10px] uppercase tracking-wider text-amber-200">
+              Coming soon
+            </span>
+          </div>
+          <p className="text-sm text-zcash-subtle">
+            Zero install from us. You expose Zebra's JSON-RPC on a public URL and we poll
+            it every few minutes — same verification, no relay binary. Better for operators
+            who want a truly turnkey setup.
+          </p>
+          <span className="text-sm text-zcash-subtle">Not yet enabled.</span>
+        </article>
       </section>
 
       <section className="flex flex-col gap-4">

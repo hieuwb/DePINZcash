@@ -69,6 +69,12 @@ export function Register() {
     <div className="grid gap-8 md:grid-cols-[2fr_3fr]">
       <div className="flex flex-col gap-4">
         <h1 className="text-2xl font-semibold">Register a node</h1>
+        <div className="rounded-md border border-zcash-gold/40 bg-zcash-gold/10 px-3 py-2 text-sm">
+          <span className="font-semibold text-zcash-gold">Launch bonus:</span>{" "}
+          <span className="text-zcash-text">
+            ~$40 in $ZePIN for registering a node and keeping it online for 24 hours.
+          </span>
+        </div>
         <p className="text-sm text-zcash-subtle">
           Sign the registration message with your Solana wallet. The server returns a node ID
           and an auth token — you paste them into the relay CLI on the machine that runs your
