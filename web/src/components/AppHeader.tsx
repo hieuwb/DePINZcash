@@ -15,7 +15,11 @@ export function AppHeader() {
     <header className="border-b border-zcash-border bg-zcash-dark/95 backdrop-blur">
       <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3">
         <NavLink to="/" className="flex items-center gap-2">
-          <ZebraGlyph />
+          <img
+            src="/main.svg"
+            alt="DePINZcash logo"
+            className="h-7 w-7 rounded-md object-contain bg-transparent"
+          />
           <span className="text-lg font-semibold tracking-tight">DePINZcash</span>
           <span className="hidden text-xs text-zcash-subtle sm:inline">/ $ZePIN on Solana</span>
         </NavLink>
@@ -63,19 +67,3 @@ export function AppHeader() {
   );
 }
 
-function ZebraGlyph() {
-  return (
-    <svg
-      viewBox="0 0 32 32"
-      aria-hidden
-      className="h-6 w-6"
-      fill="none"
-      stroke="#F4B728"
-      strokeWidth={3}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="M8 8h16l-13 14h13" />
-    </svg>
-  );
-}
