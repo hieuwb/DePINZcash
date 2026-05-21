@@ -115,9 +115,6 @@ function WalletDashboard({ wallet }: { wallet: string }) {
         <div className="flex flex-wrap items-center gap-3">
           <span className="stat-label">Wallet</span>
           <code className="break-all font-mono text-xs">{wallet}</code>
-          <Link to={`/dashboard/${encodeURIComponent(wallet)}`} className="text-xs text-zcash-subtle hover:text-zcash-text">
-            permalink
-          </Link>
         </div>
       </section>
 
