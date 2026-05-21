@@ -2,7 +2,12 @@
 
 **Decentralized Physical Infrastructure Network for Zcash**
 
-Incentive layer for Zcash nodes. Earn rewards for running a Zebra full node — the server verifies your node against a trusted-RPC quorum and pays out in **$ZePIN** (an SPL token on Solana).
+Incentive layer for Zcash nodes. Earn rewards for running a Zebra full node or a lightwalletd server — the backend verifies your node against a trusted-RPC quorum and pays out in **$ZePIN** (an SPL token on Solana).
+
+- **Site**: [zcashdepin.vercel.app](https://zcashdepin.vercel.app) (custom domain `zcashdepin.com` rolling out)
+- **API**: [api.zcashdepin.com](https://api.zcashdepin.com)
+- **X / Twitter**: [@DePINZcash](https://x.com/DePINZcash)
+- **Launch bonus**: ~$40 in $ZePIN for registering a node and keeping it online for 24 hours.
 
 > **Rewards on Solana, for now.** Until [NU7](https://zips.z.cash/protocol/nu7) and [ZIP-227](https://zips.z.cash/zip-0227) land custom assets on Zcash, payouts use a custom $ZePIN token. Once native Zcash custom assets ship, the protocol migrates to ZEC-denominated assets without changing the operator flow. This is surfaced in `/api/info` under `rewards_note`.
 
@@ -26,12 +31,38 @@ Incentive layer for Zcash nodes. Earn rewards for running a Zebra full node — 
 
 Three components, one repo:
 
-- **[server/](server/)** — Rust / Axum backend. Verifies signed proofs, runs the points/uptime scheduler, builds Merkle snapshots for $ZePIN claim distribution.
+- **[server/](server/)** — Rust / Axum backend. Verifies signed proofs, runs the points/uptime scheduler, builds Merkle snapshots for $ZePIN claim distribution. Live at `api.zcashdepin.com` (Fly.io).
 - **[prover/](prover/)** — Two binaries:
-  - `depinzcash-prover` — Halo 2 ZK proof generator that reads Zebra state (existing).
+  - `depinzcash-prover` — Halo 2 ZK proof generator that reads Zebra state.
   - `depinzcash-relay` — operator-side CLI that signs node-state submissions with a Solana keypair and posts them to the server.
-- **web/** — React/Vite frontend (planned next).
+- **[web/](web/)** — React + Vite + Tailwind frontend with Solana wallet-adapter. Live at `zcashdepin.vercel.app` (Vercel).
 - **contracts/** — Solana program for $ZePIN claim distribution (planned).
+
+---
+
+## Node types
+
+Two node types are supported, both rewarded:
+
+| Kind | Reward tier | Disk | RAM | When to choose |
+|---|---|---|---|---|
+| `zebra-full` | Higher | ~120 GB | 4–8 GB | You already run a full node or want the highest payout |
+| `lightwalletd` | Lower | ~30 GB (+ backing Zebra) | 1–2 GB | **Recommended for newcomers** — easier setup, smaller footprint |
+
+Setup guides on the site: [/run-node](https://zcashdepin.vercel.app/run-node) (Zebra) and [/run-lightwalletd](https://zcashdepin.vercel.app/run-lightwalletd) (recommended starting point).
+
+---
+
+## Verification modes
+
+How the server confirms your node is real and synced. Pick one:
+
+| Mode | Status | Operator install | How it works |
+|---|---|---|---|
+| **Relay CLI** | ✅ Active now | `depinzcash-relay` binary (~400 LOC Rust, open source) | Operator-initiated: relay reads Zebra's tip every 5 min, signs with the Solana keypair, POSTs to the server. Quorum cross-checks the claimed block hash. |
+| **Exposed RPC** | 🚧 Coming soon | Nothing from us — just expose Zebra's JSON-RPC | Server-initiated: operator registers their public RPC URL; the server polls it periodically. Zero binary install. |
+
+Until Exposed RPC ships, all operators use the Relay CLI path. The home page on the live site shows the current status of both.
 
 ---
 
@@ -166,11 +197,28 @@ Server reads `server/.env` (see `server/.env.example`). Key knobs:
 ## Tests
 
 ```bash
-cd server && cargo test    # 21 tests: unit + e2e router exercise
+cd server && cargo test
 cd prover && cargo test
 ```
 
-The server e2e suite (`server/tests/e2e_register_and_proof.rs`) hits the real router with an in-memory SQLite store and exercises register → submit → leaderboard → snapshot → claim end-to-end.
+**Server suite — 129 tests across 6 files:**
+
+| Suite | Count | What it covers |
+|---|---|---|
+| `lib` (unit + property) | 60 | Merkle, auth, RPC, config, points calculation. Includes 6 `proptest` properties (256 random cases each): every leaf verifies, sorted-pair commutativity, deterministic builds, leaf-substitution rejection, append-changes-root, hash_leaf injectivity. |
+| `e2e_register_and_proof` | 6 | Full router round-trip — register → submit → leaderboard → snapshot → claim. |
+| `adversarial_register` | 15 | Bad-input rejections at `/api/nodes/register` — bad signature, replayed nonce, stale/future timestamp, tampered message, wrong-key sig, bad RPC scheme, duplicate registrations. |
+| `adversarial_proof` | 14 | Bad-input rejections at `/api/proofs/submit` — wrong wallet, replayed nonce, empty/oversized hash, monotonic-height guard, unknown node id. |
+| `store_conformance` | 23 | Direct SQLite store tests — idempotent migrate, node CRUD, uniqueness, snapshots, nonce single-use, expiry. |
+| `rpc_quorum` | 11 | Real mock JSON-RPC servers — 3/3 majority, 2/3 majority, no-quorum, all-failing, type mismatch, single endpoint. |
+
+**Kani formal verification** — `#[cfg(kani)]` harnesses in `server/src/merkle.rs` prove (for bounded inputs):
+
+- For any 4-leaf tree and any index, the generated Merkle proof verifies against the root.
+- `hash_pair_sorted(a, b) == hash_pair_sorted(b, a)` for any 32-byte pair.
+- `hash_leaf` is deterministic.
+
+Install Kani once (`cargo install --locked kani-verifier && cargo kani setup`), then `cargo kani` runs the harnesses. They're gated behind the `kani` cfg so normal `cargo test` skips them.
 
 ---
 
@@ -197,7 +245,7 @@ DePINZcash/
 │   ├── migrations/
 │   ├── tests/                # e2e router tests
 │   └── .env.example
-├── web/                      # React/Vite frontend (planned)
+├── web/                      # React/Vite frontend (live)
 ├── contracts/                # Solana $ZePIN claim program (planned)
 ├── config/                   # Operator-side config templates
 ├── proofs/                   # Halo 2 proofs dropped here
@@ -214,21 +262,23 @@ DePINZcash/
 
 ## Roadmap
 
-### Phase 1 — Prototype (current)
+### Phase 1 — Prototype + live (current)
 - [x] Rust prover (Halo 2) — generates proofs from Zebra state
-- [x] Rust backend — verifies + scores + ranks
+- [x] Rust backend deployed on Fly.io
 - [x] Relay CLI — sign + submit + watch loop
 - [x] Trusted-RPC quorum verification
 - [x] Merkle snapshot for $ZePIN claim
-- [x] End-to-end smoke + 21 tests
-- [ ] React/Vite web frontend
-- [ ] Solana program for $ZePIN claim distribution
+- [x] 129 tests + Kani formal-verification harnesses
+- [x] React/Vite web frontend live on Vercel
+- [x] Lightwalletd guide + reward tier
+- [x] Treasury wallet displayed on the site with live SOL + $ZePIN balances
 
-### Phase 2 — Production-ready
+### Phase 2 — Production hardening
+- [ ] Exposed-RPC verification mode (no relay binary required)
+- [ ] Solana program for trustless $ZePIN claim distribution
 - [ ] Replay Halo 2 proofs to the server for stronger anti-cheat
-- [ ] Lightwalletd-specific challenges
 - [ ] Mobile monitoring app
-- [ ] Public testnet launch
+- [ ] Lightwalletd-specific challenges (gRPC health probes)
 
 ### Phase 3 — Native Zcash assets
 - [ ] Migrate payout layer to NU7 / ZIP-227 custom assets once available
