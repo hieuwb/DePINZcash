@@ -4,6 +4,7 @@ import { WalletMultiButton } from "@solana/wallet-adapter-react-ui";
 const links = [
   { to: "/", label: "Home", end: true },
   { to: "/run-node", label: "Run a node" },
+  { to: "/run-lightwalletd", label: "Run lightwalletd" },
   { to: "/leaderboard", label: "Leaderboard" },
   { to: "/dashboard", label: "Dashboard" },
   { to: "/register", label: "Register node" },

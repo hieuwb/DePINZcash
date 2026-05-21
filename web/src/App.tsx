@@ -7,6 +7,7 @@ import { Register } from "./pages/Register";
 import { Dashboard } from "./pages/Dashboard";
 import { Leaderboard } from "./pages/Leaderboard";
 import { RunNode } from "./pages/RunNode";
+import { RunLightwalletd } from "./pages/RunLightwalletd";
 import { NotFound } from "./pages/NotFound";
 
 export function App() {
@@ -21,6 +22,7 @@ export function App() {
           <Route path="/dashboard/:wallet" element={<Dashboard />} />
           <Route path="/leaderboard" element={<Leaderboard />} />
           <Route path="/run-node" element={<RunNode />} />
+          <Route path="/run-lightwalletd" element={<RunLightwalletd />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </main>

@@ -74,7 +74,36 @@ export function RunNode() {
       </section>
 
       <section className="flex flex-col gap-3">
-        <h2 className="text-lg font-semibold">System requirements</h2>
+        <h2 className="text-lg font-semibold">Resource footprint</h2>
+        <p className="text-sm text-zcash-subtle">
+          How much storage and RAM you'll commit. Both node types are supported by DePINZcash;
+          a Zebra full node earns the higher reward tier.
+        </p>
+        <div className="rounded-md border border-zcash-gold/40 bg-zcash-gold/10 px-3 py-2 text-sm text-zcash-text">
+          <strong className="text-zcash-gold">New to running a node?</strong> We recommend
+          starting with <Link to="/run-lightwalletd" className="underline hover:text-zcash-gold">lightwalletd</Link>{" "}
+          — smaller disk, simpler setup, still rewarded.
+        </div>
+        <div className="grid gap-3 md:grid-cols-2">
+          <ResourceCard
+            kind="Zebra full node"
+            gigs={120}
+            ram="4–8 GB"
+            badge="Higher reward tier"
+            badgeTone="gold"
+            note="Full chain state. Verifies every shielded transaction. Grows ~1 GB/month."
+          />
+          <ResourceCard
+            kind="Lightwalletd"
+            gigs={30}
+            ram="1–2 GB"
+            badge="Lower tier"
+            badgeTone="subtle"
+            note="Compact-block cache on top of a backing Zebra/zcashd. Serves light wallets. Small footprint."
+          />
+        </div>
+
+        <h2 className="mt-4 text-lg font-semibold">Other requirements</h2>
         <div className="card overflow-x-auto p-0">
           <table className="w-full text-sm">
             <thead className="border-b border-zcash-border text-left text-xs uppercase tracking-wider text-zcash-subtle">
@@ -86,8 +115,7 @@ export function RunNode() {
             </thead>
             <tbody className="text-sm">
               <ReqRow what="CPU" min="2 cores, 64-bit x86_64 / arm64" rec="4+ cores" />
-              <ReqRow what="RAM" min="4 GB" rec="8 GB" />
-              <ReqRow what="Disk" min="120 GB SSD (mainnet, growing)" rec="200 GB NVMe" />
+              <ReqRow what="Disk type" min="SATA SSD" rec="NVMe" />
               <ReqRow what="Network" min="10 Mbps, ~50 GB/mo egress" rec="100 Mbps, unmetered" />
               <ReqRow what="OS" min="Linux / macOS / Windows" rec="Recent Linux (Ubuntu 22.04+)" />
               <ReqRow what="Uptime" min="A few hours per day" rec="24/7 — better rewards" />
@@ -201,6 +229,36 @@ listen_addr = "127.0.0.1:8232"`}</Code>
         </Card>
       </section>
 
+      <section className="flex flex-col gap-3">
+        <h2 className="text-lg font-semibold">Verification modes</h2>
+        <div className="grid gap-3 md:grid-cols-2">
+          <div className="card flex flex-col gap-2">
+            <div className="flex items-center justify-between">
+              <h3 className="text-sm font-semibold">Relay CLI</h3>
+              <span className="inline-flex items-center gap-1 rounded-full border border-zcash-success/40 bg-zcash-success/10 px-2 py-0.5 text-[10px] uppercase tracking-wider text-emerald-300">
+                <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" /> Active now
+              </span>
+            </div>
+            <p className="text-sm text-zcash-subtle">
+              You run a small open-source binary alongside Zebra. It signs and pushes
+              proofs to our server every 5 minutes. Recommended path for now.
+            </p>
+          </div>
+          <div className="card flex flex-col gap-2">
+            <div className="flex items-center justify-between">
+              <h3 className="text-sm font-semibold">Exposed RPC</h3>
+              <span className="inline-flex items-center gap-1 rounded-full border border-zcash-warn/40 bg-zcash-warn/10 px-2 py-0.5 text-[10px] uppercase tracking-wider text-amber-200">
+                Coming soon
+              </span>
+            </div>
+            <p className="text-sm text-zcash-subtle">
+              No relay needed — you simply expose Zebra's JSON-RPC publicly and we poll
+              your node. Zero install from us. Not yet enabled; ETA next milestone.
+            </p>
+          </div>
+        </div>
+      </section>
+
       <section className="grid gap-4 md:grid-cols-3">
         <NextStep
           step="1"
@@ -254,6 +312,77 @@ function Code({ children, lang }: { children: string; lang?: string }) {
       {lang && <div className="mb-1 text-[10px] uppercase tracking-wider text-zcash-subtle">{lang}</div>}
       <code>{children}</code>
     </pre>
+  );
+}
+
+function ResourceCard({
+  kind,
+  gigs,
+  ram,
+  badge,
+  badgeTone,
+  note,
+}: {
+  kind: string;
+  gigs: number;
+  ram: string;
+  badge: string;
+  badgeTone: "gold" | "subtle";
+  note: string;
+}) {
+  // Scale bar relative to a 250 GB reference so Zebra (~120 GB) is ~half-full.
+  const REFERENCE_GB = 250;
+  const pct = Math.min(100, Math.round((gigs / REFERENCE_GB) * 100));
+  const toneClasses =
+    badgeTone === "gold"
+      ? "border-zcash-gold/40 bg-zcash-gold/10 text-zcash-gold"
+      : "border-zcash-border bg-zcash-surface text-zcash-subtle";
+
+  return (
+    <div className="card flex flex-col gap-3">
+      <div className="flex items-center justify-between">
+        <h3 className="text-sm font-semibold">{kind}</h3>
+        <span
+          className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] uppercase tracking-wider ${toneClasses}`}
+        >
+          {badge}
+        </span>
+      </div>
+
+      <div className="flex flex-col gap-1">
+        <div className="flex items-baseline justify-between">
+          <span className="stat-label">Disk</span>
+          <span className="text-2xl font-semibold text-zcash-text">
+            {gigs} <span className="text-sm text-zcash-subtle">GB</span>
+          </span>
+        </div>
+        <div className="h-2 w-full overflow-hidden rounded-full bg-zcash-dark">
+          <div
+            className="h-full rounded-full bg-zcash-gold transition-all"
+            style={{ width: `${pct}%` }}
+          />
+        </div>
+        <div className="flex justify-between text-[10px] text-zcash-subtle">
+          <span>0</span>
+          <span>{REFERENCE_GB} GB</span>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-2 gap-3 text-xs">
+        <div>
+          <span className="stat-label">RAM</span>
+          <div className="text-sm font-medium text-zcash-text">{ram}</div>
+        </div>
+        <div>
+          <span className="stat-label">Trend</span>
+          <div className="text-sm font-medium text-zcash-text">
+            {kind.includes("Zebra") ? "Grows" : "Stable"}
+          </div>
+        </div>
+      </div>
+
+      <p className="text-xs text-zcash-subtle">{note}</p>
+    </div>
   );
 }
 
