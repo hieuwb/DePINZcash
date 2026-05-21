@@ -3,7 +3,7 @@ name = "depinzcash-server"
 version = "0.1.0"
 edition = "2021"
 authors = ["DePINZcash Team"]
-description = "Backend API for DePINZcash — verifies Zebra node proofs and distributes SPL rewards on Solana"
+description = "Backend API for DePINZcash — verifies Zebra node proofs and distributes $ZePIN rewards on Solana"
 license = "MIT"
 
 [[bin]]

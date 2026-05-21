@@ -4,8 +4,9 @@ use sha2::{Digest, Sha256};
 
 use crate::state::AppState;
 
-// Snapshot layout (deliberately Solana-friendly so the on-chain Distributor
-// can verify a Merkle proof without any tricks):
+// Snapshot layout for the $ZePIN claim distributor on Solana — deliberately
+// Solana-friendly so the on-chain program can verify a Merkle proof without
+// any tricks:
 //
 //   leaf  = sha256( base58_wallet || u64_le(points) )
 //   node  = sha256( sort(left, right) )                  (sorted-pair so proofs work without index)

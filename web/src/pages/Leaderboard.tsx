@@ -30,7 +30,7 @@ export function Leaderboard() {
       <header>
         <h1 className="text-2xl font-semibold">Leaderboard</h1>
         <p className="text-sm text-zcash-subtle">
-          Ranked by lifetime points. Points settle to SPL on each snapshot cycle.
+          Ranked by lifetime points. Points settle to $ZePIN on each snapshot cycle.
         </p>
       </header>
       {error && <ErrorBanner message={error} />}

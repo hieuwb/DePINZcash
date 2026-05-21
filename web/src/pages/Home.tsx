@@ -45,8 +45,8 @@ export function Home() {
           </h1>
           <p className="max-w-prose text-sm text-zcash-subtle">
             DePINZcash verifies your node against a trusted-RPC quorum and pays out points that
-            settle to an SPL token on Solana every snapshot cycle. Run a node, sign with your
-            Solana wallet, earn.
+            settle to <strong className="text-zcash-text">$ZePIN</strong> on Solana every snapshot
+            cycle. Run a node, sign with your Solana wallet, earn.
           </p>
           <div className="flex flex-wrap gap-2">
             <Link to="/register" className="btn-primary">Register a node</Link>
@@ -93,6 +93,33 @@ export function Home() {
               {info.rewards_note}
             </p>
           )}
+        </div>
+      </section>
+
+      <section className="card flex flex-col gap-3 border-zcash-gold/30 bg-zcash-gold/5 md:flex-row md:items-center md:justify-between md:gap-6">
+        <div className="flex flex-col gap-1">
+          <h2 className="text-base font-semibold text-zcash-text">
+            No client to download from us.
+          </h2>
+          <p className="text-sm text-zcash-subtle">
+            DePINZcash has zero proprietary protocol or client to install. You run the{" "}
+            <strong className="text-zcash-text">official Zebra full node</strong> from the
+            Zcash Foundation — exactly the same software the network already uses — and the
+            relay CLI just signs and reports its state.
+          </p>
+        </div>
+        <div className="flex flex-wrap gap-2 md:shrink-0">
+          <a
+            href="https://github.com/ZcashFoundation/zebra"
+            target="_blank"
+            rel="noreferrer"
+            className="btn-primary"
+          >
+            Download Zebra ↗
+          </a>
+          <Link to="/run-node" className="btn-outline">
+            Setup guide
+          </Link>
         </div>
       </section>
 
@@ -156,7 +183,7 @@ export function Home() {
         <HowCard
           step="3"
           title="Run the relay"
-          body="The depinzcash-relay binary signs and submits node-state proofs on a loop. Points accrue continuously and settle to SPL on each snapshot cycle."
+          body="The depinzcash-relay binary signs and submits node-state proofs on a loop. Points accrue continuously and settle to $ZePIN on each snapshot cycle."
         />
       </section>
     </div>

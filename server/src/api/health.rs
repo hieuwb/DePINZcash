@@ -30,7 +30,7 @@ pub async fn info(State(state): State<AppState>) -> Json<Value> {
         "scheduler_enabled": cfg.scheduler_enabled,
         // Operators care about this — what message do they need to sign?
         "registration_message_v1": "depinzcash:register:v1\\n<wallet>\\n<nonce>\\n<rfc3339-ts>\\n<kind>\\n<network>\\n<label>\\n",
-        // Until NU7 + ZIP-227 ship Zcash custom assets, rewards are SPL-denominated on Solana.
-        "rewards_note": "rewards paid in SPL token on Solana — pending NU7 / ZIP-227 for native Zcash custom assets"
+        // Until NU7 + ZIP-227 ship Zcash custom assets, rewards are paid in $ZePIN on Solana.
+        "rewards_note": "rewards paid in $ZePIN on Solana — pending NU7 / ZIP-227 for native Zcash custom assets"
     }))
 }

@@ -186,7 +186,7 @@ function WalletDashboard({ wallet }: { wallet: string }) {
             <div className="grid gap-3 md:grid-cols-3">
               <Kv label="Cycle" value={`#${claim.cycle}`} />
               <Kv label="Points credited" value={formatNumber(claim.points)} accent />
-              <Kv label="SPL mint" value={shortAddress(claim.spl_mint, 6, 4) || "unset"} />
+              <Kv label="$ZePIN mint" value={shortAddress(claim.spl_mint, 6, 4) || "unset"} />
               <Kv label="Cluster" value={claim.solana_cluster} />
               <Kv label="Merkle root" value={shortAddress(claim.merkle_root, 8, 8)} mono />
               <Kv label="Leaf hash" value={shortAddress(claim.leaf_hash, 8, 8)} mono />

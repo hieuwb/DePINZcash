@@ -17,7 +17,7 @@ pub struct Config {
     pub snapshot_interval: Option<Duration>,
     pub max_height_drift: u64,
     pub max_clock_skew: Duration,
-    // SPL reward token info — referenced by snapshot publisher and surfaced to clients.
+    // $ZePIN (SPL) reward mint — referenced by snapshot publisher and surfaced to clients.
     pub spl_mint: Option<String>,
     pub solana_cluster: String,
     pub network: ZcashNetwork,

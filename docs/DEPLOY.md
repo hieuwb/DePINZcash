@@ -87,7 +87,7 @@ vercel env add VITE_ZCASH_NETWORK production
 # paste: mainnet
 
 vercel env add VITE_SOLANA_CLUSTER production
-# paste: devnet     (later: mainnet-beta once SPL is on mainnet)
+# paste: devnet     (later: mainnet-beta once $ZePIN is on Solana mainnet)
 
 # Deploy.
 vercel --prod

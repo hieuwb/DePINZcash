@@ -2,9 +2,9 @@
 
 **Decentralized Physical Infrastructure Network for Zcash**
 
-Incentive layer for Zcash nodes. Earn rewards for running a Zebra full node — the server verifies your node against a trusted-RPC quorum and pays out in an SPL token on Solana.
+Incentive layer for Zcash nodes. Earn rewards for running a Zebra full node — the server verifies your node against a trusted-RPC quorum and pays out in **$ZePIN** (an SPL token on Solana).
 
-> **Rewards on Solana, for now.** Until [NU7](https://zips.z.cash/protocol/nu7) and [ZIP-227](https://zips.z.cash/zip-0227) land custom assets on Zcash, payouts use a custom SPL token. Once native Zcash custom assets ship, the protocol migrates to ZEC-denominated assets without changing the operator flow. This is surfaced in `/api/info` under `rewards_note`.
+> **Rewards on Solana, for now.** Until [NU7](https://zips.z.cash/protocol/nu7) and [ZIP-227](https://zips.z.cash/zip-0227) land custom assets on Zcash, payouts use a custom $ZePIN token. Once native Zcash custom assets ship, the protocol migrates to ZEC-denominated assets without changing the operator flow. This is surfaced in `/api/info` under `rewards_note`.
 
 ---
 
@@ -19,19 +19,19 @@ Incentive layer for Zcash nodes. Earn rewards for running a Zebra full node — 
             │ reads Zebra metrics                   │ Merkle snapshot
             ▼                                       ▼
    ┌──────────────────┐                   ┌─────────────────────┐
-   │ Local Zebra full │                   │  Solana SPL claim   │
+   │ Local Zebra full │                   │  Solana $ZePIN claim   │
    │ node (RocksDB)   │                   │  (NU7/ZIP-227 ready)│
    └──────────────────┘                   └─────────────────────┘
 ```
 
 Three components, one repo:
 
-- **[server/](server/)** — Rust / Axum backend. Verifies signed proofs, runs the points/uptime scheduler, builds Merkle snapshots for SPL claim distribution.
+- **[server/](server/)** — Rust / Axum backend. Verifies signed proofs, runs the points/uptime scheduler, builds Merkle snapshots for $ZePIN claim distribution.
 - **[prover/](prover/)** — Two binaries:
   - `depinzcash-prover` — Halo 2 ZK proof generator that reads Zebra state (existing).
   - `depinzcash-relay` — operator-side CLI that signs node-state submissions with a Solana keypair and posts them to the server.
 - **web/** — React/Vite frontend (planned next).
-- **contracts/** — Solana program for SPL claim distribution (planned).
+- **contracts/** — Solana program for $ZePIN claim distribution (planned).
 
 ---
 
@@ -124,7 +124,7 @@ The Solana claim program lives in `contracts/` (planned next).
 | Method | Path | Notes |
 |--------|------|-------|
 | GET | `/healthz`, `/readyz` | Liveness + readiness |
-| GET | `/api/info` | Version, network, registration message format, SPL mint |
+| GET | `/api/info` | Version, network, registration message format, $ZePIN mint |
 | POST | `/api/nodes/register` | Signed registration → returns `node_id` + `auth_token` |
 | GET | `/api/nodes/:id` | Public node info |
 | GET | `/api/wallet/:wallet/nodes` | Nodes owned by wallet |
@@ -191,14 +191,14 @@ DePINZcash/
 │   │   ├── store/            # sqlx + sqlite
 │   │   ├── rpc.rs            # trusted-RPC quorum client
 │   │   ├── scheduler.rs      # heartbeat / uptime / staleness / snapshot tickers
-│   │   ├── merkle.rs         # SPL claim Merkle tree
+│   │   ├── merkle.rs         # $ZePIN claim Merkle tree
 │   │   ├── auth.rs           # Solana signature verification
 │   │   └── ...
 │   ├── migrations/
 │   ├── tests/                # e2e router tests
 │   └── .env.example
 ├── web/                      # React/Vite frontend (planned)
-├── contracts/                # Solana SPL claim program (planned)
+├── contracts/                # Solana $ZePIN claim program (planned)
 ├── config/                   # Operator-side config templates
 ├── proofs/                   # Halo 2 proofs dropped here
 ├── scripts/
@@ -219,10 +219,10 @@ DePINZcash/
 - [x] Rust backend — verifies + scores + ranks
 - [x] Relay CLI — sign + submit + watch loop
 - [x] Trusted-RPC quorum verification
-- [x] Merkle snapshot for SPL claim
+- [x] Merkle snapshot for $ZePIN claim
 - [x] End-to-end smoke + 21 tests
 - [ ] React/Vite web frontend
-- [ ] Solana program for SPL claim distribution
+- [ ] Solana program for $ZePIN claim distribution
 
 ### Phase 2 — Production-ready
 - [ ] Replay Halo 2 proofs to the server for stronger anti-cheat
@@ -232,7 +232,7 @@ DePINZcash/
 
 ### Phase 3 — Native Zcash assets
 - [ ] Migrate payout layer to NU7 / ZIP-227 custom assets once available
-- [ ] Keep Solana SPL path open for cross-chain demand
+- [ ] Keep $ZePIN / Solana path open for cross-chain demand
 
 ---
 
