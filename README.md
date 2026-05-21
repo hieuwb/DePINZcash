@@ -251,10 +251,7 @@ DePINZcash/
 ├── proofs/                   # Halo 2 proofs dropped here
 ├── scripts/
 ├── docs/
-│   ├── TECHNICAL_SPEC.md
-│   ├── REWARDS.md
-│   ├── ZK_IMPLEMENTATION.md
-│   └── FAQ.md
+│   └── DEPLOY.md             # fly.io + vercel deploy guide
 └── README.md
 ```
 
