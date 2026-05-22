@@ -64,8 +64,12 @@ struct SubmitArgs {
     keypair: PathBuf,
     #[arg(long, default_value = "config/relay-state.json")]
     state: PathBuf,
-    // Source of node metrics — either a proof JSON produced by depinzcash-prover,
-    // or direct flags for height + block hash (handy for testing).
+    // Source of node metrics, in priority order:
+    //   1. --node-rpc <url>         — query Zebra each tick (recommended for `watch`)
+    //   2. --proof-file <path>      — read from a depinzcash-prover JSON
+    //   3. --height + --block-hash  — explicit one-off submission (for testing)
+    #[arg(long, env = "NODE_RPC")]
+    node_rpc: Option<String>,
     #[arg(long)]
     proof_file: Option<PathBuf>,
     #[arg(long)]
@@ -231,7 +235,7 @@ async fn submit_once(args: &SubmitArgs) -> Result<serde_json::Value> {
     }
 
     let (height, block_hash, uptime, peers, binary_hash) =
-        gather_metrics(args).context("gathering metrics")?;
+        gather_metrics(args).await.context("gathering metrics")?;
 
     let nonce = random_nonce();
     let proof_ts = Utc::now();
@@ -290,7 +294,12 @@ async fn watch(args: WatchArgs) -> Result<()> {
     }
 }
 
-fn gather_metrics(args: &SubmitArgs) -> Result<(u64, String, u64, u32, Option<String>)> {
+async fn gather_metrics(args: &SubmitArgs) -> Result<(u64, String, u64, u32, Option<String>)> {
+    // 1. live Zebra RPC has highest precedence — every tick reflects the current tip.
+    if let Some(rpc_url) = &args.node_rpc {
+        let (height, block_hash) = query_zebra_tip(rpc_url).await?;
+        return Ok((height, block_hash, args.uptime_seconds, args.peers, args.binary_hash.clone()));
+    }
     if let Some(path) = &args.proof_file {
         let bytes = fs::read(path).with_context(|| format!("reading proof file {:?}", path))?;
         let v: serde_json::Value = serde_json::from_slice(&bytes)?;
@@ -309,13 +318,60 @@ fn gather_metrics(args: &SubmitArgs) -> Result<(u64, String, u64, u32, Option<St
         let binary_hash = v["node_info"]["zebra_binary_hash"].as_str().map(String::from);
         Ok((height, block_hash, uptime_seconds, peers, binary_hash))
     } else {
-        let height = args.height.ok_or_else(|| anyhow!("--height required when --proof-file is absent"))?;
+        let height = args
+            .height
+            .ok_or_else(|| anyhow!("provide --node-rpc, --proof-file, or --height + --block-hash"))?;
         let block_hash = args
             .block_hash
             .clone()
             .ok_or_else(|| anyhow!("--block-hash required when --proof-file is absent"))?;
         Ok((height, block_hash, args.uptime_seconds, args.peers, args.binary_hash.clone()))
     }
+}
+
+// Hits Zebra's JSON-RPC for the current tip. Returns (height, best_block_hash).
+async fn query_zebra_tip(rpc_url: &str) -> Result<(u64, String)> {
+    let client = reqwest::Client::builder()
+        .timeout(Duration::from_secs(5))
+        .build()?;
+
+    let height: u64 = rpc_call(&client, rpc_url, "getblockcount", json!([])).await?
+        .as_u64()
+        .ok_or_else(|| anyhow!("getblockcount: result is not a number"))?;
+    let hash: String = rpc_call(&client, rpc_url, "getbestblockhash", json!([])).await?
+        .as_str()
+        .map(String::from)
+        .ok_or_else(|| anyhow!("getbestblockhash: result is not a string"))?;
+
+    Ok((height, hash))
+}
+
+async fn rpc_call(
+    client: &reqwest::Client,
+    url: &str,
+    method: &str,
+    params: serde_json::Value,
+) -> Result<serde_json::Value> {
+    let body = json!({"jsonrpc": "1.0", "id": "depinzcash-relay", "method": method, "params": params});
+    let resp = client
+        .post(url)
+        .json(&body)
+        .send()
+        .await
+        .with_context(|| format!("zebra rpc {method} send"))?;
+    let status = resp.status();
+    let text = resp.text().await?;
+    if !status.is_success() {
+        return Err(anyhow!("zebra rpc {method} returned {}: {}", status, text));
+    }
+    let v: serde_json::Value = serde_json::from_str(&text)
+        .with_context(|| format!("parsing zebra rpc {method} response: {text}"))?;
+    if let Some(err) = v.get("error").filter(|e| !e.is_null()) {
+        return Err(anyhow!("zebra rpc {method} error: {}", err));
+    }
+    v.get("result")
+        .cloned()
+        .ok_or_else(|| anyhow!("zebra rpc {method} missing result"))
 }
 
 fn registration_message(
