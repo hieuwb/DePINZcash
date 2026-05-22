@@ -51,6 +51,13 @@ Two node types are supported, both rewarded:
 
 Setup guides on the site: [/run-node](https://zcashdepin.vercel.app/run-node) (Zebra) and [/run-lightwalletd](https://zcashdepin.vercel.app/run-lightwalletd) (recommended starting point).
 
+Vietnamese VPS fullnode guide: [docs/RUN_FULLNODE_VI.md](docs/RUN_FULLNODE_VI.md). It includes the interactive installer script for running a Zebra full node and the DePINZcash relay:
+
+```bash
+chmod +x scripts/depinzcash-node.sh
+./scripts/depinzcash-node.sh
+```
+
 ---
 
 ## Verification modes
