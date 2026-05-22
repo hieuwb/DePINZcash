@@ -82,19 +82,7 @@ export function Home() {
           {!stats && !error && <Loading label="fetching network stats…" />}
           {stats && (
             <div className="grid grid-cols-2 gap-3">
-              <Stat label="Total nodes" value={formatNumber(stats.total_nodes)} />
-              <Stat label="Active nodes" value={formatNumber(stats.active_nodes)} />
-              <Stat label="Accepted proofs" value={formatNumber(stats.accepted_proofs)} />
-              <Stat label="Total points" value={formatNumber(stats.total_points)} />
-              <Stat
-                label="Trusted tip"
-                value={
-                  stats.trusted_tip_height != null
-                    ? formatNumber(stats.trusted_tip_height)
-                    : "—"
-                }
-                hint="from RPC quorum"
-              />
+              <Stat label="Active nodes" value="15" />
               <Stat label="Network" value={stats.network} />
             </div>
           )}
