@@ -13,6 +13,7 @@ ZEBRA_VOLUME="${ZEBRA_VOLUME:-zebra-state}"
 SERVICE_NAME="depinzcash-relay"
 NODE_RPC="${NODE_RPC:-http://127.0.0.1:8232}"
 API_ENDPOINT="${DEPINZCASH_API:-$DEFAULT_API}"
+REGISTER_RETRY_SECS="${REGISTER_RETRY_SECS:-60}"
 
 if [[ -z "$REPO_DIR" ]]; then
   SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -308,6 +309,64 @@ configure_relay_from_web() {
   info "Relay da chay. No se gui proof len DePINZcash moi 5 phut."
 }
 
+register_from_terminal() {
+  if [[ ! -x "$REPO_DIR/prover/target/release/depinzcash-relay" ]]; then
+    echo "Chua co relay binary. Hay chay muc 1 de cai va build node truoc."
+    return
+  fi
+  if [[ ! -f "$KEYPAIR" ]]; then
+    echo "Chua co keypair. Hay chay muc 1 de tao keypair truoc."
+    return
+  fi
+  if [[ -f "$STATE_FILE" ]]; then
+    info "Relay state da ton tai: $STATE_FILE"
+    install_systemd_service
+    info "Relay da duoc bat lai va se gui proof moi 5 phut."
+    return
+  fi
+
+  local label retry_secs attempt log_file
+  read -r -p "Nhap label node (Enter de dung 'primary'): " label
+  label="${label:-primary}"
+  retry_secs="$REGISTER_RETRY_SECS"
+  if ! [[ "$retry_secs" =~ ^[0-9]+$ ]] || (( retry_secs < 30 )); then
+    retry_secs=60
+  fi
+  attempt=1
+  log_file="$(mktemp)"
+
+  echo
+  echo "Dang ky truc tiep bang depinzcash-relay register."
+  echo "Neu API tra 429, script se cho ${retry_secs}s roi thu lai. Bam Ctrl+C de dung."
+
+  while true; do
+    echo
+    echo "Lan thu $attempt..."
+    if "$REPO_DIR/prover/target/release/depinzcash-relay" register \
+      --api "$API_ENDPOINT" \
+      --keypair "$KEYPAIR" \
+      --kind zebra-full \
+      --label "$label" \
+      --state "$STATE_FILE" 2>&1 | tee "$log_file"; then
+      rm -f "$log_file"
+      info "Dang ky thanh cong va da luu relay state vao $STATE_FILE"
+      install_systemd_service
+      info "Relay da chay. No se gui proof len DePINZcash moi 5 phut."
+      return
+    fi
+
+    if grep -qi "Too Many Requests\\|429" "$log_file"; then
+      echo "API dang rate limit. Cho ${retry_secs}s roi thu lai..."
+      sleep "$retry_secs"
+      attempt=$((attempt + 1))
+      continue
+    fi
+
+    rm -f "$log_file"
+    die "Dang ky that bai voi loi khong phai rate limit. Xem thong bao o tren."
+  done
+}
+
 install_and_run() {
   info "Bat dau cai dat va chay node."
   install_packages
@@ -320,7 +379,8 @@ install_and_run() {
 
   info "Hoan tat. Zebra fullnode dang sync."
   info "Neu da dang ky tren web, chon muc 2 de nhap Node ID/Auth Token va bat relay."
-  info "Neu chua dang ky, chon muc 4 de xuat key vi roi len web register."
+  info "Neu muon dang ky truc tiep bang terminal, chon muc 3."
+  info "Neu chua dang ky, chon muc 5 de xuat key vi roi len web register."
 }
 
 show_logs() {
@@ -383,6 +443,7 @@ export_wallet_key() {
   echo "2. Ky message dang ky. Viec ky chi chung minh quyen so huu vi, khong chuyen token."
   echo "3. Web se tra ve Node ID va Auth Token."
   echo "4. Quay lai VPS, chon muc 2 va dan Node ID/Auth Token de bat relay."
+  echo "Hoac chon muc 3 de dang ky truc tiep bang terminal."
   echo
   echo "CANH BAO: keypair_b58 ben duoi la private key. Khong gui cho bat ky ai."
   echo "-----BEGIN DEPINZCASH SOLANA KEYPAIR-----"
@@ -405,16 +466,18 @@ main_menu() {
     echo
     echo "1) Cai va chay node"
     echo "2) Nhap Node ID va Auth Token"
-    echo "3) Xem logs"
-    echo "4) Xuat key vi"
+    echo "3) Dang ky truc tiep bang terminal"
+    echo "4) Xem logs"
+    echo "5) Xuat key vi"
     echo "0) Thoat"
     echo
     read -r -p "Chon: " choice
     case "$choice" in
       1) install_and_run; read -r -p "Nhan Enter de quay lai menu..." ;;
       2) configure_relay_from_web; read -r -p "Nhan Enter de quay lai menu..." ;;
-      3) show_logs ;;
-      4) export_wallet_key; read -r -p "Nhan Enter de quay lai menu..." ;;
+      3) register_from_terminal; read -r -p "Nhan Enter de quay lai menu..." ;;
+      4) show_logs ;;
+      5) export_wallet_key; read -r -p "Nhan Enter de quay lai menu..." ;;
       0) exit 0 ;;
       *) echo "Lua chon khong hop le."; sleep 1 ;;
     esac

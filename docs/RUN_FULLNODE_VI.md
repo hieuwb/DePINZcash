@@ -39,7 +39,8 @@ Script se tu dong:
 - Tao Solana keypair cho relay neu chua co.
 - Khong tu dang ky node len API.
 - Muc `2) Nhap Node ID va Auth Token` se tao relay state va bat service `depinzcash-relay`.
-- Neu chua co `Node ID/Auth Token`, dung muc `4) Xuat key vi` de len web register truoc.
+- Muc `3) Dang ky truc tiep bang terminal` se goi `depinzcash-relay register`, gap rate limit thi cho roi thu lai.
+- Neu chua co `Node ID/Auth Token`, dung muc `5) Xuat key vi` de len web register truoc.
 
 ## Flow dung
 
@@ -58,7 +59,7 @@ Sau khi cai xong, Zebra fullnode se bat dau sync. Quay lai menu de xuat key vi.
 Chon:
 
 ```text
-4) Xuat key vi
+5) Xuat key vi
 ```
 
 Script se in ra:
@@ -79,7 +80,7 @@ Len trang Register cua DePINZcash.
 
 Chi dang ky tren web thoi chua du de nhan thuong. VPS van phai chay Zebra fullnode va relay phai gui proof moi 5 phut.
 
-### Buoc 4: Quay lai VPS de bat relay
+### Buoc 4A: Quay lai VPS de bat relay bang Node ID/Auth Token
 
 Chay lai:
 
@@ -105,13 +106,30 @@ va bat service:
 depinzcash-relay
 ```
 
+### Buoc 4B: Hoac dang ky truc tiep bang terminal
+
+Neu khong muon dung web, chon:
+
+```text
+3) Dang ky truc tiep bang terminal
+```
+
+Muc nay dung keypair tren VPS de chay `depinzcash-relay register`. Neu API tra `429 Too Many Requests`, script se cho 60 giay roi thu lai. Bam `Ctrl+C` de dung.
+
+Co the doi thoi gian cho bang bien moi truong:
+
+```bash
+REGISTER_RETRY_SECS=120 ./scripts/depinzcash-node.sh
+```
+
 ## Menu cua script
 
 ```text
 1) Cai va chay node
 2) Nhap Node ID va Auth Token
-3) Xem logs
-4) Xuat key vi
+3) Dang ky truc tiep bang terminal
+4) Xem logs
+5) Xuat key vi
 0) Thoat
 ```
 
@@ -123,7 +141,13 @@ Dung de cai moi hoac khoi dong lai setup. Neu keypair da ton tai, script se giu 
 
 Dung sau khi da dang ky tren web. Muc nay se tao file relay state va bat service `depinzcash-relay` de gui proof moi 5 phut.
 
-### 3. Xem logs
+### 3. Dang ky truc tiep bang terminal
+
+Dung neu muon bo qua web register. Muc nay tu goi `depinzcash-relay register`, neu thanh cong se luu relay state va bat service. Neu API dang qua tai va tra `429`, script cho 60 giay roi thu lai.
+
+Khong nen retry 1 giay/lần vi no lam rate limit nang hon va co the khien IP bi chan lau hon.
+
+### 4. Xem logs
 
 Co 3 lua chon:
 
@@ -144,7 +168,7 @@ Neu Docker yeu cau quyen root:
 sudo docker logs -f zebrad
 ```
 
-### 4. Xuat key vi
+### 5. Xuat key vi
 
 In ra public wallet, `keypair_b58`, va neu da cau hinh relay thi in them Node ID.
 
@@ -186,7 +210,7 @@ curl -s -H 'Content-Type: application/json' \
 - Neu VPS login bang `root`, co the chay script truc tiep.
 - Lan build dau tien co the lau vi Rust phai compile RocksDB dependency.
 - Zebra full node can thoi gian sync lau, thuong vai gio den hon mot ngay tuy VPS va network.
-- Script khong register node tu dong. Ban can dung muc `4) Xuat key vi`, len web connect/register, lay `Node ID/Auth Token`, roi chay muc `2) Nhap Node ID va Auth Token` de bat relay.
+- Script khong register node tu dong trong muc cai node. Ban co the dung muc `5) Xuat key vi`, len web connect/register, lay `Node ID/Auth Token`, roi chay muc `2) Nhap Node ID va Auth Token`; hoac dung muc `3) Dang ky truc tiep bang terminal`.
 - Dung tat VPS trong luc sync neu co the.
 - Nen backup file `~/.depinzcash/config/solana-keypair.json` o noi an toan.
 - Nen backup file `~/.depinzcash/config/relay-state.json` sau khi da dan `Node ID/Auth Token`.
