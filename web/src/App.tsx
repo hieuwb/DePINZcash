@@ -7,6 +7,7 @@ import { Register } from "./pages/Register";
 import { Dashboard } from "./pages/Dashboard";
 import { NodeDetail } from "./pages/NodeDetail";
 import { Leaderboard } from "./pages/Leaderboard";
+import { Explorer } from "./pages/Explorer";
 import { RunNode } from "./pages/RunNode";
 import { RunLightwalletd } from "./pages/RunLightwalletd";
 import { NotFound } from "./pages/NotFound";
@@ -23,6 +24,7 @@ export function App() {
           <Route path="/dashboard/:wallet" element={<Dashboard />} />
           <Route path="/node/:id" element={<NodeDetail />} />
           <Route path="/leaderboard" element={<Leaderboard />} />
+          <Route path="/explorer" element={<Explorer />} />
           <Route path="/run-node" element={<RunNode />} />
           <Route path="/run-lightwalletd" element={<RunLightwalletd />} />
           <Route path="*" element={<NotFound />} />

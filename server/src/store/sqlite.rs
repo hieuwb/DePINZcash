@@ -146,6 +146,43 @@ impl SqliteStore {
         rows.into_iter().map(node_from_row).collect()
     }
 
+    // Public explorer: nodes that have at least one accepted proof, ordered by
+    // most recently active. Filters out registration-only spam.
+    pub async fn list_active_nodes(&self, network: &str, limit: i64) -> anyhow::Result<Vec<Node>> {
+        let rows = sqlx::query(
+            r#"SELECT id, wallet, kind, label, rpc_endpoint, network, status,
+                last_height, last_block_hash, last_proof_at, registered_at, points, uptime_seconds
+                FROM nodes
+                WHERE network = ?1 AND last_proof_at IS NOT NULL
+                ORDER BY last_proof_at DESC
+                LIMIT ?2"#,
+        )
+        .bind(network)
+        .bind(limit)
+        .fetch_all(&self.pool)
+        .await?;
+        rows.into_iter().map(node_from_row).collect()
+    }
+
+    // Global recent proofs feed for the explorer page.
+    pub async fn list_recent_proofs(&self, network: &str, limit: i64) -> anyhow::Result<Vec<Proof>> {
+        let rows = sqlx::query(
+            r#"SELECT p.id, p.node_id, p.wallet, p.claimed_height, p.claimed_block_hash,
+                      p.proof_timestamp, p.binary_hash, p.uptime_seconds, p.peers,
+                      p.verdict, p.reject_reason, p.points_awarded, p.received_at
+               FROM proofs p
+               JOIN nodes n ON n.id = p.node_id
+               WHERE n.network = ?1
+               ORDER BY p.received_at DESC
+               LIMIT ?2"#,
+        )
+        .bind(network)
+        .bind(limit)
+        .fetch_all(&self.pool)
+        .await?;
+        rows.into_iter().map(proof_from_row).collect()
+    }
+
     pub async fn update_node_status(&self, id: Uuid, status: NodeStatus) -> anyhow::Result<()> {
         sqlx::query("UPDATE nodes SET status = ?1 WHERE id = ?2")
             .bind(status.as_str())

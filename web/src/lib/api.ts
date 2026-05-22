@@ -173,6 +173,14 @@ export const api = {
     request<ProofRecord[]>(`/api/nodes/${encodeURIComponent(id)}/proofs?limit=${limit}`),
   nodeSeries: (id: string, days = 14) =>
     request<NodeDailyBucket[]>(`/api/nodes/${encodeURIComponent(id)}/series?days=${days}`),
+  activeNodes: (limit = 200) => request<PublicNode[]>(`/api/nodes?limit=${limit}`),
+  recentProofs: (limit = 100) => request<ProofRecord[]>(`/api/proofs/recent?limit=${limit}`),
 };
+
+// Block explorer link for a Zcash block hash. Blockchair confirmed working
+// against mainnet block hashes (cross-checked against the server's proofs).
+export function zcashExplorerUrl(blockHash: string): string {
+  return `https://blockchair.com/zcash/block/${blockHash.replace(/^0x/, "")}`;
+}
 
 export { ApiError };

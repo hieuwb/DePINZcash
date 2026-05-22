@@ -6,6 +6,7 @@ const links = [
   { to: "/run-node", label: "Run a node" },
   { to: "/run-lightwalletd", label: "Run lightwalletd" },
   { to: "/leaderboard", label: "Leaderboard" },
+  { to: "/explorer", label: "Explorer" },
   { to: "/dashboard", label: "Dashboard" },
   { to: "/register", label: "Register node" },
 ];

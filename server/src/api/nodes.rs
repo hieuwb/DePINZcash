@@ -162,6 +162,28 @@ pub async fn list_for_wallet(
 }
 
 #[derive(Debug, Deserialize)]
+pub struct ExplorerListQuery {
+    #[serde(default = "default_explorer_limit")]
+    pub limit: i64,
+}
+
+fn default_explorer_limit() -> i64 {
+    100
+}
+
+pub async fn list_active(
+    State(state): State<AppState>,
+    Query(q): Query<ExplorerListQuery>,
+) -> AppResult<Json<Vec<PublicNode>>> {
+    let limit = q.limit.clamp(1, 500);
+    let nodes = state
+        .store()
+        .list_active_nodes(state.config().network.as_str(), limit)
+        .await?;
+    Ok(Json(nodes.iter().map(PublicNode::from).collect()))
+}
+
+#[derive(Debug, Deserialize)]
 pub struct ProofsQuery {
     #[serde(default = "default_proof_limit")]
     pub limit: i64,

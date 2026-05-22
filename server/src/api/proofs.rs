@@ -238,6 +238,18 @@ pub async fn list_for_wallet(
     Ok(Json(proofs))
 }
 
+pub async fn list_recent(
+    State(state): State<AppState>,
+    Query(q): Query<ListQuery>,
+) -> AppResult<Json<Vec<Proof>>> {
+    let limit = q.limit.clamp(1, 500);
+    let proofs = state
+        .store()
+        .list_recent_proofs(state.config().network.as_str(), limit)
+        .await?;
+    Ok(Json(proofs))
+}
+
 // Reward formula:
 //   base = node.kind.reward_tier()                       (10 for zebra-full, 6 for lwd)
 //   freshness = max(0, 5 - drift_from_tip)               (0..=5)
