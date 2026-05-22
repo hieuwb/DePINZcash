@@ -185,12 +185,42 @@ register_if_needed() {
 
   mkdir -p "$(dirname "$STATE_FILE")"
   info "Dang register node len $API_ENDPOINT."
-  "$REPO_DIR/prover/target/release/depinzcash-relay" register \
-    --api "$API_ENDPOINT" \
-    --keypair "$KEYPAIR" \
-    --kind zebra-full \
-    --label "$label" \
-    --state "$STATE_FILE"
+
+  local attempt=1
+  local max_attempts=6
+  local delay=30
+  local log_file
+  log_file="$(mktemp)"
+
+  while (( attempt <= max_attempts )); do
+    if "$REPO_DIR/prover/target/release/depinzcash-relay" register \
+      --api "$API_ENDPOINT" \
+      --keypair "$KEYPAIR" \
+      --kind zebra-full \
+      --label "$label" \
+      --state "$STATE_FILE" 2>&1 | tee "$log_file"; then
+      rm -f "$log_file"
+      return
+    fi
+
+    if grep -qi "Too Many Requests\\|429" "$log_file"; then
+      echo
+      echo "API dang rate limit register. Thu lai lan $((attempt + 1))/$max_attempts sau ${delay}s..."
+      sleep "$delay"
+      delay=$((delay * 2))
+      if (( delay > 300 )); then
+        delay=300
+      fi
+      attempt=$((attempt + 1))
+      continue
+    fi
+
+    rm -f "$log_file"
+    die "Dang ky node that bai. Xem loi o tren."
+  done
+
+  rm -f "$log_file"
+  die "API van tra 429 sau nhieu lan thu. Hay cho 10-30 phut roi chay lai muc 1; keypair hien tai van duoc giu tai $KEYPAIR."
 }
 
 install_systemd_service() {
