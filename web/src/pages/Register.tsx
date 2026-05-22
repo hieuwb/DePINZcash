@@ -80,6 +80,15 @@ export function Register() {
           and an auth token — you paste them into the relay CLI on the machine that runs your
           Zebra node.
         </p>
+        <div className="rounded-md border border-zcash-warn/40 bg-zcash-warn/10 px-3 py-2 text-xs text-amber-200">
+          <strong className="text-amber-100">Heads up:</strong> registering here alone won't earn
+          $ZePIN. You also need a running Zcash node + the relay CLI on a machine you control,
+          submitting proofs every 5 minutes. If you haven't set those up yet, follow the{" "}
+          <Link to="/run-lightwalletd" className="underline hover:text-amber-100">lightwalletd guide</Link>{" "}
+          or <Link to="/run-node" className="underline hover:text-amber-100">Zebra guide</Link> first —
+          or skip this page entirely and register directly from the terminal with{" "}
+          <code className="text-amber-100">depinzcash-relay register</code>.
+        </div>
         <div className="card text-xs text-zcash-subtle">
           <p className="font-semibold text-zcash-text">Why am I signing?</p>
           <p className="mt-1">

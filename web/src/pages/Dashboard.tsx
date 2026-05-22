@@ -130,11 +130,7 @@ function WalletDashboard({ wallet }: { wallet: string }) {
       <section className="flex flex-col gap-3">
         <h2 className="text-lg font-semibold">Nodes</h2>
         {!nodes && !error && <Loading />}
-        {nodes && nodes.length === 0 && (
-          <div className="card text-sm text-zcash-subtle">
-            No nodes registered for this wallet. <Link to="/register" className="text-zcash-gold">Register one →</Link>
-          </div>
-        )}
+        {nodes && nodes.length === 0 && <OnboardingCard />}
         {nodes && nodes.length > 0 && (
           <div className="card overflow-x-auto p-0">
             <table className="w-full text-sm">
@@ -234,5 +230,75 @@ function StatusBadge({ status }: { status: string }) {
     <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] uppercase tracking-wider ${colour}`}>
       {status}
     </span>
+  );
+}
+
+function OnboardingCard() {
+  return (
+    <div className="card flex flex-col gap-4 border-zcash-gold/30 bg-zcash-gold/5">
+      <div>
+        <h3 className="text-base font-semibold text-zcash-text">No nodes yet for this wallet.</h3>
+        <p className="mt-1 text-sm text-zcash-subtle">
+          Connecting a wallet alone doesn't earn $ZePIN — you need a running Zcash node
+          submitting proofs from it. Three steps to set one up:
+        </p>
+      </div>
+
+      <ol className="flex flex-col gap-3 text-sm">
+        <li className="flex flex-col gap-1">
+          <span className="text-xs uppercase tracking-wider text-zcash-gold">Step 1</span>
+          <span className="font-medium text-zcash-text">Download Zebra (or lightwalletd)</span>
+          <span className="text-zcash-subtle">
+            Official Zcash full node from the Zcash Foundation. Lightwalletd is the easier
+            starting point if you've never run a node before.
+          </span>
+          <div className="mt-1 flex flex-wrap gap-2">
+            <a
+              href="https://github.com/ZcashFoundation/zebra"
+              target="_blank"
+              rel="noreferrer"
+              className="btn-outline"
+            >
+              Download Zebra ↗
+            </a>
+            <Link to="/run-lightwalletd" className="btn-outline">Start with lightwalletd</Link>
+            <Link to="/run-node" className="btn-outline">Full Zebra setup</Link>
+          </div>
+        </li>
+
+        <li className="flex flex-col gap-1">
+          <span className="text-xs uppercase tracking-wider text-zcash-gold">Step 2</span>
+          <span className="font-medium text-zcash-text">Register from the terminal</span>
+          <span className="text-zcash-subtle">
+            Open a terminal on the machine running your node, build the relay binary, and run:
+          </span>
+          <pre className="overflow-x-auto rounded-md border border-zcash-border bg-zcash-dark p-3 font-mono text-xs leading-5 text-zcash-text">
+{`# build the relay (one-time)
+git clone https://github.com/ZcashDePIN/DePINZcash
+cd DePINZcash/prover
+cargo build --release --bin depinzcash-relay
+sudo cp ./target/release/depinzcash-relay /usr/local/bin/
+
+# generate a keypair + register your node
+depinzcash-relay keygen --out ~/.depinzcash/solana-keypair.json
+depinzcash-relay register \\
+  --api https://api.zcashdepin.com \\
+  --keypair ~/.depinzcash/solana-keypair.json \\
+  --kind zebra-full \\
+  --label my-node`}
+          </pre>
+        </li>
+
+        <li className="flex flex-col gap-1">
+          <span className="text-xs uppercase tracking-wider text-zcash-gold">Step 3</span>
+          <span className="font-medium text-zcash-text">Come back and refresh</span>
+          <span className="text-zcash-subtle">
+            Once the relay starts submitting proofs, paste the wallet pubkey it printed
+            into the lookup box at the top of this page (or connect that wallet in Phantom).
+            Points start accruing every 5 minutes.
+          </span>
+        </li>
+      </ol>
+    </div>
   );
 }
