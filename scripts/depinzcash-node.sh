@@ -2,13 +2,17 @@
 set -Eeuo pipefail
 
 APP_NAME="DePINZcash"
-REPO_URL="https://github.com/ZcashDePIN/DePINZcash.git"
+REPO_URL="https://github.com/hieuwb/DePINZcash.git"
+DEFAULT_API="https://api.zcashdepin.com"
 REPO_DIR="${DEPINZCASH_REPO_DIR:-}"
 INSTALL_DIR="${DEPINZCASH_HOME:-$HOME/.depinzcash}"
 KEYPAIR="$INSTALL_DIR/config/solana-keypair.json"
+STATE_FILE="$INSTALL_DIR/config/relay-state.json"
 ZEBRA_CONTAINER="${ZEBRA_CONTAINER:-zebrad}"
 ZEBRA_VOLUME="${ZEBRA_VOLUME:-zebra-state}"
+SERVICE_NAME="depinzcash-relay"
 NODE_RPC="${NODE_RPC:-http://127.0.0.1:8232}"
+API_ENDPOINT="${DEPINZCASH_API:-$DEFAULT_API}"
 
 if [[ -z "$REPO_DIR" ]]; then
   SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -169,51 +173,6 @@ keygen_if_needed() {
   chmod 600 "$KEYPAIR"
 }
 
-install_and_run() {
-  info "Bat dau cai dat va chay node."
-  install_packages
-  install_docker
-  ensure_rust
-  ensure_repo
-  build_relay
-  start_zebra
-  keygen_if_needed
-
-  info "Hoan tat. Zebra fullnode dang sync."
-  info "Script khong tu dang ky node. Hay dung muc 3 de xuat key vi, sau do len web de connect vi va register."
-  info "Xem logs Zebra bang muc 2 trong menu hoac: docker logs -f $ZEBRA_CONTAINER"
-}
-
-show_logs() {
-  echo
-  echo "1) Logs Zebra fullnode"
-  echo "2) Trang thai Zebra/RPC"
-  read -r -p "Chon: " log_choice
-  case "$log_choice" in
-    1)
-      if docker ps >/dev/null 2>&1; then
-        docker logs -f "$ZEBRA_CONTAINER"
-      else
-        need_sudo docker logs -f "$ZEBRA_CONTAINER"
-      fi
-      ;;
-    2)
-      if docker ps >/dev/null 2>&1; then
-        docker ps -a --filter "name=$ZEBRA_CONTAINER"
-      else
-        need_sudo docker ps -a --filter "name=$ZEBRA_CONTAINER"
-      fi
-      echo
-      echo "Kiem tra RPC local:"
-      curl -s -H 'Content-Type: application/json' \
-        -d '{"jsonrpc":"1.0","id":"1","method":"getblockcount","params":[]}' \
-        "$NODE_RPC" || true
-      echo
-      ;;
-    *) echo "Lua chon khong hop le." ;;
-  esac
-}
-
 wallet_public_key() {
   python3 - "$KEYPAIR" <<'PY'
 import json
@@ -250,6 +209,161 @@ print(b58encode(full[32:]))
 PY
 }
 
+write_relay_state() {
+  local wallet="$1"
+  local node_id="$2"
+  local auth_token="$3"
+  local label="$4"
+
+  mkdir -p "$(dirname "$STATE_FILE")"
+  python3 - "$STATE_FILE" "$API_ENDPOINT" "$wallet" "$node_id" "$auth_token" "$label" <<'PY'
+import datetime
+import json
+import sys
+
+path, api, wallet, node_id, auth_token, label = sys.argv[1:7]
+payload = {
+    "api": api,
+    "wallet": wallet,
+    "node_id": node_id,
+    "auth_token": auth_token,
+    "kind": "zebra-full",
+    "label": label,
+    "registered_at": datetime.datetime.now(datetime.timezone.utc).isoformat().replace("+00:00", "Z"),
+}
+with open(path, "w", encoding="utf-8") as fh:
+    json.dump(payload, fh, indent=2)
+    fh.write("\n")
+PY
+  chmod 600 "$STATE_FILE"
+}
+
+install_systemd_service() {
+  local relay_bin="$REPO_DIR/prover/target/release/depinzcash-relay"
+  local service_file="/etc/systemd/system/$SERVICE_NAME.service"
+  local user_line=""
+
+  if [[ "$REAL_USER" != "root" ]]; then
+    user_line="User=$REAL_USER
+Group=$REAL_USER"
+  fi
+
+  local tmp
+  tmp="$(mktemp)"
+  cat >"$tmp" <<EOF
+[Unit]
+Description=DePINZcash relay
+After=network-online.target docker.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+$user_line
+WorkingDirectory=$REPO_DIR
+Environment=RUST_LOG=info
+Environment=DEPINZCASH_API=$API_ENDPOINT
+ExecStart=$relay_bin watch --interval-secs 300 --api $API_ENDPOINT --keypair $KEYPAIR --state $STATE_FILE --node-rpc $NODE_RPC
+Restart=always
+RestartSec=20
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+  need_sudo install -m 0644 "$tmp" "$service_file"
+  rm -f "$tmp"
+  need_sudo systemctl daemon-reload
+  need_sudo systemctl enable --now "$SERVICE_NAME"
+}
+
+configure_relay_from_web() {
+  if [[ -f "$STATE_FILE" ]]; then
+    info "Relay state da ton tai: $STATE_FILE"
+    install_systemd_service
+    info "Relay da duoc bat lai va se gui proof moi 5 phut."
+    return
+  fi
+
+  echo
+  echo "Sau khi dang ky tren web, ban se nhan Node ID va Auth Token."
+  echo "Neu chua dang ky web, chon 'n', sau do dung muc 3 de xuat key vi."
+  read -r -p "Ban da co Node ID/Auth Token tu web chua? (y/N): " has_credentials
+  if [[ ! "$has_credentials" =~ ^[Yy]$ ]]; then
+    echo
+    echo "Buoc tiep theo:"
+    echo "1. Chon muc 3 de xuat key vi."
+    echo "2. Len web DePINZcash de connect/register bang vi do."
+    echo "3. Lay Node ID va Auth Token tren web."
+    echo "4. Chay lai muc 1, nhap Node ID/Auth Token de bat relay."
+    return
+  fi
+
+  local node_id auth_token label wallet
+  read -r -p "Nhap Node ID tu web: " node_id
+  read -r -p "Nhap Auth Token tu web: " auth_token
+  read -r -p "Nhap label node (Enter de dung 'primary'): " label
+  label="${label:-primary}"
+
+  [[ -n "$node_id" ]] || die "Node ID khong duoc de trong."
+  [[ -n "$auth_token" ]] || die "Auth Token khong duoc de trong."
+
+  wallet="$(wallet_public_key)"
+  write_relay_state "$wallet" "$node_id" "$auth_token" "$label"
+  info "Da luu relay state vao $STATE_FILE"
+  install_systemd_service
+  info "Relay da chay. No se gui proof len DePINZcash moi 5 phut."
+}
+
+install_and_run() {
+  info "Bat dau cai dat va chay node."
+  install_packages
+  install_docker
+  ensure_rust
+  ensure_repo
+  build_relay
+  start_zebra
+  keygen_if_needed
+  configure_relay_from_web
+
+  info "Hoan tat. Zebra fullnode dang sync."
+  info "Xem logs bang muc 2 trong menu."
+}
+
+show_logs() {
+  echo
+  echo "1) Logs relay DePINZcash"
+  echo "2) Logs Zebra fullnode"
+  echo "3) Trang thai Zebra/RPC"
+  read -r -p "Chon: " log_choice
+  case "$log_choice" in
+    1) need_sudo journalctl -u "$SERVICE_NAME" -f --no-hostname ;;
+    2)
+      if docker ps >/dev/null 2>&1; then
+        docker logs -f "$ZEBRA_CONTAINER"
+      else
+        need_sudo docker logs -f "$ZEBRA_CONTAINER"
+      fi
+      ;;
+    3)
+      need_sudo systemctl --no-pager status "$SERVICE_NAME" || true
+      echo
+      echo "Zebra container:"
+      if docker ps >/dev/null 2>&1; then
+        docker ps -a --filter "name=$ZEBRA_CONTAINER"
+      else
+        need_sudo docker ps -a --filter "name=$ZEBRA_CONTAINER"
+      fi
+      echo
+      echo "Kiem tra RPC local:"
+      curl -s -H 'Content-Type: application/json' \
+        -d '{"jsonrpc":"1.0","id":"1","method":"getblockcount","params":[]}' \
+        "$NODE_RPC" || true
+      echo
+      ;;
+    *) echo "Lua chon khong hop le." ;;
+  esac
+}
+
 export_wallet_key() {
   echo
   echo "Vi tri keypair: $KEYPAIR"
@@ -264,8 +378,18 @@ export_wallet_key() {
     echo "Wallet public key: khong doc duoc vi VPS thieu python3."
   fi
 
+  if [[ -f "$STATE_FILE" ]] && command_exists jq; then
+    echo "Node ID: $(jq -r '.node_id // empty' "$STATE_FILE")"
+    echo "Relay state: $STATE_FILE"
+  fi
+
   echo
-  echo "Dung wallet public key tren de connect/register tren web."
+  echo "Huong dan dang ky web:"
+  echo "1. Dung wallet public key/vi Solana nay de connect tren trang Register."
+  echo "2. Ky message dang ky. Viec ky chi chung minh quyen so huu vi, khong chuyen token."
+  echo "3. Web se tra ve Node ID va Auth Token."
+  echo "4. Quay lai VPS, chay muc 1 va dan Node ID/Auth Token de bat relay."
+  echo
   echo "CANH BAO: keypair_b58 ben duoi la private key. Khong gui cho bat ky ai."
   echo "-----BEGIN DEPINZCASH SOLANA KEYPAIR-----"
   if command_exists jq; then
