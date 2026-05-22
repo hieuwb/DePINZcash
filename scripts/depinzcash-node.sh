@@ -3,16 +3,12 @@ set -Eeuo pipefail
 
 APP_NAME="DePINZcash"
 REPO_URL="https://github.com/ZcashDePIN/DePINZcash.git"
-DEFAULT_API="https://api.zcashdepin.com"
 REPO_DIR="${DEPINZCASH_REPO_DIR:-}"
 INSTALL_DIR="${DEPINZCASH_HOME:-$HOME/.depinzcash}"
 KEYPAIR="$INSTALL_DIR/config/solana-keypair.json"
-STATE_FILE="$INSTALL_DIR/config/relay-state.json"
 ZEBRA_CONTAINER="${ZEBRA_CONTAINER:-zebrad}"
 ZEBRA_VOLUME="${ZEBRA_VOLUME:-zebra-state}"
-SERVICE_NAME="depinzcash-relay"
 NODE_RPC="${NODE_RPC:-http://127.0.0.1:8232}"
-API_ENDPOINT="${DEPINZCASH_API:-$DEFAULT_API}"
 
 if [[ -z "$REPO_DIR" ]]; then
   SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -70,16 +66,16 @@ install_packages() {
   case "$pm" in
     apt)
       need_sudo apt-get update
-      need_sudo apt-get install -y curl git ca-certificates build-essential clang libclang-dev pkg-config jq
+      need_sudo apt-get install -y curl git ca-certificates build-essential clang libclang-dev pkg-config jq python3
       ;;
     dnf)
-      need_sudo dnf install -y curl git ca-certificates gcc gcc-c++ clang clang-devel pkgconf-pkg-config jq
+      need_sudo dnf install -y curl git ca-certificates gcc gcc-c++ clang clang-devel pkgconf-pkg-config jq python3
       ;;
     yum)
-      need_sudo yum install -y curl git ca-certificates gcc gcc-c++ clang clang-devel pkgconfig jq
+      need_sudo yum install -y curl git ca-certificates gcc gcc-c++ clang clang-devel pkgconfig jq python3
       ;;
     *)
-      info "Khong nhan dien duoc package manager. Hay cai thu cong: curl git ca-certificates clang pkg-config jq."
+      info "Khong nhan dien duoc package manager. Hay cai thu cong: curl git ca-certificates clang pkg-config jq python3."
       ;;
   esac
 }
@@ -173,94 +169,6 @@ keygen_if_needed() {
   chmod 600 "$KEYPAIR"
 }
 
-register_if_needed() {
-  if [[ -f "$STATE_FILE" ]]; then
-    info "Relay state da ton tai: $STATE_FILE"
-    return
-  fi
-
-  local label
-  read -r -p "Nhap label node (Enter de dung 'primary'): " label
-  label="${label:-primary}"
-
-  mkdir -p "$(dirname "$STATE_FILE")"
-  info "Dang register node len $API_ENDPOINT."
-
-  local attempt=1
-  local max_attempts=6
-  local delay=30
-  local log_file
-  log_file="$(mktemp)"
-
-  while (( attempt <= max_attempts )); do
-    if "$REPO_DIR/prover/target/release/depinzcash-relay" register \
-      --api "$API_ENDPOINT" \
-      --keypair "$KEYPAIR" \
-      --kind zebra-full \
-      --label "$label" \
-      --state "$STATE_FILE" 2>&1 | tee "$log_file"; then
-      rm -f "$log_file"
-      return
-    fi
-
-    if grep -qi "Too Many Requests\\|429" "$log_file"; then
-      echo
-      echo "API dang rate limit register. Thu lai lan $((attempt + 1))/$max_attempts sau ${delay}s..."
-      sleep "$delay"
-      delay=$((delay * 2))
-      if (( delay > 300 )); then
-        delay=300
-      fi
-      attempt=$((attempt + 1))
-      continue
-    fi
-
-    rm -f "$log_file"
-    die "Dang ky node that bai. Xem loi o tren."
-  done
-
-  rm -f "$log_file"
-  die "API van tra 429 sau nhieu lan thu. Hay cho 10-30 phut roi chay lai muc 1; keypair hien tai van duoc giu tai $KEYPAIR."
-}
-
-install_systemd_service() {
-  local relay_bin="$REPO_DIR/prover/target/release/depinzcash-relay"
-  local service_file="/etc/systemd/system/$SERVICE_NAME.service"
-  local user_line=""
-
-  if [[ "$REAL_USER" != "root" ]]; then
-    user_line="User=$REAL_USER
-Group=$REAL_USER"
-  fi
-
-  local tmp
-  tmp="$(mktemp)"
-  cat >"$tmp" <<EOF
-[Unit]
-Description=DePINZcash relay
-After=network-online.target docker.service
-Wants=network-online.target
-
-[Service]
-Type=simple
-$user_line
-WorkingDirectory=$REPO_DIR
-Environment=RUST_LOG=info
-Environment=DEPINZCASH_API=$API_ENDPOINT
-ExecStart=$relay_bin watch --interval-secs 300 --api $API_ENDPOINT --keypair $KEYPAIR --state $STATE_FILE --node-rpc $NODE_RPC
-Restart=always
-RestartSec=20
-
-[Install]
-WantedBy=multi-user.target
-EOF
-
-  need_sudo install -m 0644 "$tmp" "$service_file"
-  rm -f "$tmp"
-  need_sudo systemctl daemon-reload
-  need_sudo systemctl enable --now "$SERVICE_NAME"
-}
-
 install_and_run() {
   info "Bat dau cai dat va chay node."
   install_packages
@@ -270,38 +178,76 @@ install_and_run() {
   build_relay
   start_zebra
   keygen_if_needed
-  register_if_needed
-  install_systemd_service
 
-  info "Hoan tat. Zebra dang sync; relay se submit moi 5 phut qua $NODE_RPC."
-  info "Xem logs bang muc 2 trong menu hoac: journalctl -u $SERVICE_NAME -f"
+  info "Hoan tat. Zebra fullnode dang sync."
+  info "Script khong tu dang ky node. Hay dung muc 3 de xuat key vi, sau do len web de connect vi va register."
+  info "Xem logs Zebra bang muc 2 trong menu hoac: docker logs -f $ZEBRA_CONTAINER"
 }
 
 show_logs() {
   echo
-  echo "1) Logs relay DePINZcash"
-  echo "2) Logs Zebra"
-  echo "3) Trang thai services"
+  echo "1) Logs Zebra fullnode"
+  echo "2) Trang thai Zebra/RPC"
   read -r -p "Chon: " log_choice
   case "$log_choice" in
-    1) need_sudo journalctl -u "$SERVICE_NAME" -f --no-hostname ;;
-    2)
+    1)
       if docker ps >/dev/null 2>&1; then
         docker logs -f "$ZEBRA_CONTAINER"
       else
         need_sudo docker logs -f "$ZEBRA_CONTAINER"
       fi
       ;;
-    3)
-      need_sudo systemctl --no-pager status "$SERVICE_NAME" || true
+    2)
       if docker ps >/dev/null 2>&1; then
         docker ps -a --filter "name=$ZEBRA_CONTAINER"
       else
         need_sudo docker ps -a --filter "name=$ZEBRA_CONTAINER"
       fi
+      echo
+      echo "Kiem tra RPC local:"
+      curl -s -H 'Content-Type: application/json' \
+        -d '{"jsonrpc":"1.0","id":"1","method":"getblockcount","params":[]}' \
+        "$NODE_RPC" || true
+      echo
       ;;
     *) echo "Lua chon khong hop le." ;;
   esac
+}
+
+wallet_public_key() {
+  python3 - "$KEYPAIR" <<'PY'
+import json
+import sys
+
+alphabet = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz"
+
+def b58decode(value):
+    n = 0
+    for char in value:
+        n *= 58
+        if char not in alphabet:
+            raise ValueError("invalid base58 character")
+        n += alphabet.index(char)
+    raw = n.to_bytes((n.bit_length() + 7) // 8, "big") if n else b""
+    pad = len(value) - len(value.lstrip("1"))
+    return b"\x00" * pad + raw
+
+def b58encode(raw):
+    n = int.from_bytes(raw, "big")
+    out = ""
+    while n:
+        n, rem = divmod(n, 58)
+        out = alphabet[rem] + out
+    pad = len(raw) - len(raw.lstrip(b"\x00"))
+    return "1" * pad + (out or "")
+
+with open(sys.argv[1], "r", encoding="utf-8") as fh:
+    keypair_b58 = json.load(fh)["keypair_b58"]
+full = b58decode(keypair_b58)
+if len(full) != 64:
+    raise SystemExit(f"expected 64-byte keypair, got {len(full)}")
+print(b58encode(full[32:]))
+PY
 }
 
 export_wallet_key() {
@@ -312,12 +258,14 @@ export_wallet_key() {
     return
   fi
 
-  if [[ -f "$STATE_FILE" ]] && command_exists jq; then
-    echo "Wallet public key: $(jq -r '.wallet // empty' "$STATE_FILE")"
-    echo "Node ID: $(jq -r '.node_id // empty' "$STATE_FILE")"
+  if command_exists python3; then
+    echo "Wallet public key: $(wallet_public_key)"
+  else
+    echo "Wallet public key: khong doc duoc vi VPS thieu python3."
   fi
 
   echo
+  echo "Dung wallet public key tren de connect/register tren web."
   echo "CANH BAO: keypair_b58 ben duoi la private key. Khong gui cho bat ky ai."
   echo "-----BEGIN DEPINZCASH SOLANA KEYPAIR-----"
   if command_exists jq; then
@@ -335,7 +283,7 @@ main_menu() {
     echo "  DePINZcash Node Installer"
     echo "===================================="
     echo "Repo: $REPO_DIR"
-    echo "API : $API_ENDPOINT"
+    echo "RPC : $NODE_RPC"
     echo
     echo "1) Cai va chay node"
     echo "2) Xem logs"

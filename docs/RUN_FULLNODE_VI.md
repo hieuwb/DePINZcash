@@ -1,6 +1,6 @@
 # Huong dan chay DePINZcash Fullnode tren VPS
 
-Tai lieu nay danh cho nguoi muon chay **Zebra full node** de tham gia DePINZcash. Script ben duoi se cai va chay fullnode Zcash bang Zebra, sau do chay `depinzcash-relay` de dang ky node va gui proof len DePINZcash API moi 5 phut.
+Tai lieu nay danh cho nguoi muon chay **Zebra full node** de tham gia DePINZcash. Script ben duoi se cai va chay fullnode Zcash bang Zebra, build `depinzcash-relay`, va tao key vi Solana de ban dung tren web. Script **khong tu dang ky node qua API**; sau khi cai xong, ban xuat key vi roi len web de connect/register.
 
 ## Yeu cau VPS
 
@@ -37,8 +37,8 @@ Script se tu dong:
 - Chay Zebra full node bang Docker image `zfnd/zebra:latest`.
 - Bat Zebra RPC noi bo tai `127.0.0.1:8232`.
 - Tao Solana keypair cho relay neu chua co.
-- Dang ky node len `https://api.zcashdepin.com`.
-- Tao systemd service `depinzcash-relay` de gui proof moi 5 phut.
+- Khong tu dang ky node len API.
+- Hien huong dan xuat key vi de ban len web connect va register.
 
 ## Menu cua script
 
@@ -51,20 +51,18 @@ Script se tu dong:
 
 ### 1. Cai va chay node
 
-Dung de cai moi hoac khoi dong lai setup. Neu keypair va relay state da ton tai, script se giu lai va khong tao key moi.
+Dung de cai moi hoac khoi dong lai setup. Neu keypair da ton tai, script se giu lai va khong tao key moi.
 
 ### 2. Xem logs
 
-Co 3 lua chon:
+Co 2 lua chon:
 
-- Logs relay DePINZcash.
 - Logs Zebra full node.
-- Trang thai service/container.
+- Trang thai Zebra/RPC.
 
 Lenh xem logs thu cong:
 
 ```bash
-sudo journalctl -u depinzcash-relay -f
 docker logs -f zebrad
 ```
 
@@ -76,7 +74,9 @@ sudo docker logs -f zebrad
 
 ### 3. Xuat key vi
 
-In ra public wallet, node ID va `keypair_b58`.
+In ra public wallet va `keypair_b58`.
+
+Dung public wallet de len web DePINZcash connect/register node.
 
 Canh bao: `keypair_b58` la private key. Khong gui cho bat ky ai, khong dang len Discord/Telegram/GitHub.
 
@@ -86,24 +86,12 @@ File key nam tai:
 ~/.depinzcash/config/solana-keypair.json
 ```
 
-Relay state nam tai:
-
-```bash
-~/.depinzcash/config/relay-state.json
-```
-
 ## Cac lenh kiem tra huu ich
 
 Kiem tra Zebra container:
 
 ```bash
 docker ps -a --filter name=zebrad
-```
-
-Kiem tra relay service:
-
-```bash
-sudo systemctl status depinzcash-relay --no-pager
 ```
 
 Kiem tra Zebra RPC:
@@ -120,24 +108,13 @@ curl -s -H 'Content-Type: application/json' \
 - Neu VPS login bang `root`, co the chay script truc tiep.
 - Lan build dau tien co the lau vi Rust phai compile RocksDB dependency.
 - Zebra full node can thoi gian sync lau, thuong vai gio den hon mot ngay tuy VPS va network.
+- Script khong register node tu dong. Ban can dung muc `3) Xuat key vi`, sau do len web connect/register.
 - Dung tat VPS trong luc sync neu co the.
 - Nen backup file `~/.depinzcash/config/solana-keypair.json` o noi an toan.
 - Neu xoa volume Docker `zebra-state`, Zebra se phai sync lai tu dau.
-- Neu xoa keypair, node moi se dung vi moi va khong trung voi node da dang ky truoc do.
+- Neu xoa keypair, node moi se dung vi moi va khong trung voi vi da dung tren web truoc do.
 
 ## Cau hinh nang cao
-
-Mac dinh script dung API production:
-
-```bash
-https://api.zcashdepin.com
-```
-
-Co the doi API bang bien moi truong:
-
-```bash
-DEPINZCASH_API="https://api.example.com" ./scripts/depinzcash-node.sh
-```
 
 Co the doi thu muc luu key/config:
 
