@@ -6,11 +6,14 @@ pub mod proofs;
 pub mod rewards;
 pub mod stats;
 
+use std::sync::Arc;
+
 use axum::{
     http::{HeaderName, HeaderValue, Method},
     routing::{get, post},
     Router,
 };
+use tower_governor::{governor::GovernorConfigBuilder, GovernorLayer};
 use tower_http::{
     cors::{AllowOrigin, CorsLayer},
     trace::TraceLayer,
@@ -21,23 +24,39 @@ use crate::state::AppState;
 pub fn router(state: AppState) -> Router {
     let cors = build_cors(&state);
 
-    Router::new()
+    // Hot mutating endpoints get a per-IP rate limit. Read-only endpoints stay open.
+    let mut posts: Router<AppState> = Router::new()
+        .route("/api/nodes/register", post(nodes::register))
+        .route("/api/proofs/submit", post(proofs::submit))
+        .route("/api/challenges/request", post(challenges::request))
+        .route("/api/challenges/submit", post(challenges::submit))
+        .route("/api/admin/snapshot/publish", post(admin::publish_snapshot));
+
+    if state.config().rate_limit_enabled {
+        let gov_conf = Arc::new(
+            GovernorConfigBuilder::default()
+                .per_second(state.config().rate_limit_per_second)
+                .burst_size(state.config().rate_limit_burst)
+                .finish()
+                .expect("governor config builds with positive values"),
+        );
+        posts = posts.layer(GovernorLayer { config: gov_conf });
+    }
+
+    let gets: Router<AppState> = Router::new()
         .route("/healthz", get(health::healthz))
         .route("/readyz", get(health::readyz))
         .route("/api/info", get(health::info))
-        .route("/api/nodes/register", post(nodes::register))
         .route("/api/nodes/:id", get(nodes::get_by_id))
         .route("/api/wallet/:wallet/nodes", get(nodes::list_for_wallet))
         .route("/api/wallet/:wallet/stats", get(stats::wallet_stats))
         .route("/api/wallet/:wallet/proofs", get(proofs::list_for_wallet))
         .route("/api/wallet/:wallet/claim/latest", get(rewards::latest_claim))
-        .route("/api/proofs/submit", post(proofs::submit))
-        .route("/api/challenges/request", post(challenges::request))
-        .route("/api/challenges/submit", post(challenges::submit))
         .route("/api/stats/network", get(stats::network))
         .route("/api/stats/leaderboard", get(stats::leaderboard))
-        .route("/api/snapshots/latest", get(rewards::latest_snapshot))
-        .route("/api/admin/snapshot/publish", post(admin::publish_snapshot))
+        .route("/api/snapshots/latest", get(rewards::latest_snapshot));
+
+    gets.merge(posts)
         .layer(TraceLayer::new_for_http())
         .layer(cors)
         .with_state(state)

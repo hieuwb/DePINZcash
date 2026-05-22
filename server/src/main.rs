@@ -33,9 +33,14 @@ async fn main() -> anyhow::Result<()> {
     let listener = tokio::net::TcpListener::bind(addr).await.context("binding listener")?;
     tracing::info!(%addr, "depinzcash-server listening");
 
-    axum::serve(listener, app.into_make_service())
-        .await
-        .context("serving")?;
+    // into_make_service_with_connect_info wires ConnectInfo<SocketAddr> into each
+    // request's extensions — required by the per-IP rate limiter.
+    axum::serve(
+        listener,
+        app.into_make_service_with_connect_info::<SocketAddr>(),
+    )
+    .await
+    .context("serving")?;
     Ok(())
 }
 

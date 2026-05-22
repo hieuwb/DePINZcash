@@ -17,6 +17,10 @@ pub struct Config {
     pub snapshot_interval: Option<Duration>,
     pub max_height_drift: u64,
     pub max_clock_skew: Duration,
+    // Rate limiting (per-IP token bucket).
+    pub rate_limit_enabled: bool,
+    pub rate_limit_per_second: u64,
+    pub rate_limit_burst: u32,
     // $ZePIN (SPL) reward mint — referenced by snapshot publisher and surfaced to clients.
     pub spl_mint: Option<String>,
     pub solana_cluster: String,
@@ -89,6 +93,19 @@ impl Config {
             .unwrap_or(8);
         let max_clock_skew = parse_duration("MAX_CLOCK_SKEW", Duration::from_secs(15 * 60))?;
 
+        let rate_limit_enabled = !matches!(
+            std::env::var("RATE_LIMIT_ENABLED").unwrap_or_default().to_lowercase().as_str(),
+            "false" | "0" | "no" | "off"
+        );
+        let rate_limit_per_second = std::env::var("RATE_LIMIT_RPS")
+            .ok()
+            .and_then(|s| s.parse().ok())
+            .unwrap_or(5);
+        let rate_limit_burst = std::env::var("RATE_LIMIT_BURST")
+            .ok()
+            .and_then(|s| s.parse().ok())
+            .unwrap_or(30);
+
         let spl_mint = std::env::var("SPL_MINT").ok().filter(|s| !s.is_empty());
         let solana_cluster = std::env::var("SOLANA_CLUSTER").unwrap_or_else(|_| "devnet".to_string());
 
@@ -112,6 +129,9 @@ impl Config {
             snapshot_interval,
             max_height_drift,
             max_clock_skew,
+            rate_limit_enabled,
+            rate_limit_per_second,
+            rate_limit_burst,
             spl_mint,
             solana_cluster,
             network,

@@ -19,6 +19,7 @@ axum = { version = "0.7", features = ["macros", "tracing"] }
 tokio = { version = "1", features = ["full"] }
 tower = "0.5"
 tower-http = { version = "0.6", features = ["cors", "trace", "limit"] }
+tower_governor = "0.4"
 hyper = { version = "1", features = ["server"] }
 
 sqlx = { version = "0.8", default-features = false, features = ["runtime-tokio-rustls", "sqlite", "chrono", "uuid", "macros", "migrate"] }
