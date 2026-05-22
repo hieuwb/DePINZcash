@@ -38,8 +38,8 @@ Script se tu dong:
 - Bat Zebra RPC noi bo tai `127.0.0.1:8232`.
 - Tao Solana keypair cho relay neu chua co.
 - Khong tu dang ky node len API.
-- Neu ban da co `Node ID` va `Auth Token` tu web, script se tao relay state va bat service `depinzcash-relay`.
-- Neu chua co, script se huong dan dung muc `3) Xuat key vi` de len web register truoc.
+- Muc `2) Nhap Node ID va Auth Token` se tao relay state va bat service `depinzcash-relay`.
+- Neu chua co `Node ID/Auth Token`, dung muc `4) Xuat key vi` de len web register truoc.
 
 ## Flow dung
 
@@ -51,26 +51,14 @@ Chay script va chon:
 1) Cai va chay node
 ```
 
-Neu script hoi:
-
-```text
-Ban da co Node ID/Auth Token tu web chua? (y/N):
-```
-
-Lan dau tien hay nhap:
-
-```text
-n
-```
-
-Sau do quay lai menu.
+Sau khi cai xong, Zebra fullnode se bat dau sync. Quay lai menu de xuat key vi.
 
 ### Buoc 2: Xuat key vi
 
 Chon:
 
 ```text
-3) Xuat key vi
+4) Xuat key vi
 ```
 
 Script se in ra:
@@ -102,13 +90,7 @@ Chay lai:
 Chon:
 
 ```text
-1) Cai va chay node
-```
-
-Khi script hoi `Node ID/Auth Token`, nhap:
-
-```text
-y
+2) Nhap Node ID va Auth Token
 ```
 
 Dan `Node ID` va `Auth Token` tu web vao. Script se tao:
@@ -127,8 +109,9 @@ depinzcash-relay
 
 ```text
 1) Cai va chay node
-2) Xem logs
-3) Xuat key vi
+2) Nhap Node ID va Auth Token
+3) Xem logs
+4) Xuat key vi
 0) Thoat
 ```
 
@@ -136,7 +119,11 @@ depinzcash-relay
 
 Dung de cai moi hoac khoi dong lai setup. Neu keypair da ton tai, script se giu lai va khong tao key moi.
 
-### 2. Xem logs
+### 2. Nhap Node ID va Auth Token
+
+Dung sau khi da dang ky tren web. Muc nay se tao file relay state va bat service `depinzcash-relay` de gui proof moi 5 phut.
+
+### 3. Xem logs
 
 Co 3 lua chon:
 
@@ -157,7 +144,7 @@ Neu Docker yeu cau quyen root:
 sudo docker logs -f zebrad
 ```
 
-### 3. Xuat key vi
+### 4. Xuat key vi
 
 In ra public wallet, `keypair_b58`, va neu da cau hinh relay thi in them Node ID.
 
@@ -199,7 +186,7 @@ curl -s -H 'Content-Type: application/json' \
 - Neu VPS login bang `root`, co the chay script truc tiep.
 - Lan build dau tien co the lau vi Rust phai compile RocksDB dependency.
 - Zebra full node can thoi gian sync lau, thuong vai gio den hon mot ngay tuy VPS va network.
-- Script khong register node tu dong. Ban can dung muc `3) Xuat key vi`, len web connect/register, lay `Node ID/Auth Token`, roi chay lai muc `1) Cai va chay node` de bat relay.
+- Script khong register node tu dong. Ban can dung muc `4) Xuat key vi`, len web connect/register, lay `Node ID/Auth Token`, roi chay muc `2) Nhap Node ID va Auth Token` de bat relay.
 - Dung tat VPS trong luc sync neu co the.
 - Nen backup file `~/.depinzcash/config/solana-keypair.json` o noi an toan.
 - Nen backup file `~/.depinzcash/config/relay-state.json` sau khi da dan `Node ID/Auth Token`.

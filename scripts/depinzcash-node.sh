@@ -277,6 +277,11 @@ EOF
 }
 
 configure_relay_from_web() {
+  if [[ ! -f "$KEYPAIR" ]]; then
+    echo "Chua co keypair. Hay chay muc 1 de cai va chay node truoc."
+    return
+  fi
+
   if [[ -f "$STATE_FILE" ]]; then
     info "Relay state da ton tai: $STATE_FILE"
     install_systemd_service
@@ -286,17 +291,6 @@ configure_relay_from_web() {
 
   echo
   echo "Sau khi dang ky tren web, ban se nhan Node ID va Auth Token."
-  echo "Neu chua dang ky web, chon 'n', sau do dung muc 3 de xuat key vi."
-  read -r -p "Ban da co Node ID/Auth Token tu web chua? (y/N): " has_credentials
-  if [[ ! "$has_credentials" =~ ^[Yy]$ ]]; then
-    echo
-    echo "Buoc tiep theo:"
-    echo "1. Chon muc 3 de xuat key vi."
-    echo "2. Len web DePINZcash de connect/register bang vi do."
-    echo "3. Lay Node ID va Auth Token tren web."
-    echo "4. Chay lai muc 1, nhap Node ID/Auth Token de bat relay."
-    return
-  fi
 
   local node_id auth_token label wallet
   read -r -p "Nhap Node ID tu web: " node_id
@@ -323,10 +317,10 @@ install_and_run() {
   build_relay
   start_zebra
   keygen_if_needed
-  configure_relay_from_web
 
   info "Hoan tat. Zebra fullnode dang sync."
-  info "Xem logs bang muc 2 trong menu."
+  info "Neu da dang ky tren web, chon muc 2 de nhap Node ID/Auth Token va bat relay."
+  info "Neu chua dang ky, chon muc 4 de xuat key vi roi len web register."
 }
 
 show_logs() {
@@ -388,7 +382,7 @@ export_wallet_key() {
   echo "1. Dung wallet public key/vi Solana nay de connect tren trang Register."
   echo "2. Ky message dang ky. Viec ky chi chung minh quyen so huu vi, khong chuyen token."
   echo "3. Web se tra ve Node ID va Auth Token."
-  echo "4. Quay lai VPS, chay muc 1 va dan Node ID/Auth Token de bat relay."
+  echo "4. Quay lai VPS, chon muc 2 va dan Node ID/Auth Token de bat relay."
   echo
   echo "CANH BAO: keypair_b58 ben duoi la private key. Khong gui cho bat ky ai."
   echo "-----BEGIN DEPINZCASH SOLANA KEYPAIR-----"
@@ -410,15 +404,17 @@ main_menu() {
     echo "RPC : $NODE_RPC"
     echo
     echo "1) Cai va chay node"
-    echo "2) Xem logs"
-    echo "3) Xuat key vi"
+    echo "2) Nhap Node ID va Auth Token"
+    echo "3) Xem logs"
+    echo "4) Xuat key vi"
     echo "0) Thoat"
     echo
     read -r -p "Chon: " choice
     case "$choice" in
       1) install_and_run; read -r -p "Nhan Enter de quay lai menu..." ;;
-      2) show_logs ;;
-      3) export_wallet_key; read -r -p "Nhan Enter de quay lai menu..." ;;
+      2) configure_relay_from_web; read -r -p "Nhan Enter de quay lai menu..." ;;
+      3) show_logs ;;
+      4) export_wallet_key; read -r -p "Nhan Enter de quay lai menu..." ;;
       0) exit 0 ;;
       *) echo "Lua chon khong hop le."; sleep 1 ;;
     esac
