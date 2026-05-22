@@ -128,6 +128,7 @@ fn test_config(rpcs: Vec<String>) -> Config {
         rate_limit_enabled: false,
         rate_limit_per_second: 1000,
         rate_limit_burst: 5000,
+        registration_enabled: true,
         spl_mint: None,
         solana_cluster: "devnet".into(),
         network: ZcashNetwork::Mainnet,

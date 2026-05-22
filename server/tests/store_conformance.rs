@@ -344,13 +344,20 @@ async fn expire_old_challenges_only_touches_open() {
 #[tokio::test]
 async fn network_stats_count_correctly() {
     let store = fresh_store().await;
+    // network_stats only counts nodes that have produced an accepted proof
+    // (last_proof_at IS NOT NULL) — registration-only spam doesn't inflate
+    // the public counter.
     for (i, w) in ["wA", "wB", "wC"].iter().enumerate() {
         let mut n = sample_node(w, None);
         n.status = if i == 2 { NodeStatus::Registered } else { NodeStatus::Active };
+        if i < 2 {
+            n.last_proof_at = Some(Utc::now());
+        }
         store.insert_node(&n, &format!("t{i}")).await.unwrap();
     }
     let stats = store.network_stats("mainnet").await.unwrap();
-    assert_eq!(stats.total_nodes, 3);
+    // 2 nodes have proofs (wA active, wB active), 1 has none (wC registered)
+    assert_eq!(stats.total_nodes, 2);
     assert_eq!(stats.active_nodes, 2);
     assert_eq!(stats.network, "mainnet");
 }

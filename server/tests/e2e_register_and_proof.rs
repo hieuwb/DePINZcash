@@ -37,6 +37,7 @@ fn test_config() -> Config {
         rate_limit_enabled: false,
         rate_limit_per_second: 1000,
         rate_limit_burst: 5000,
+        registration_enabled: true,
         spl_mint: Some("So11111111111111111111111111111111111111112".into()),
         solana_cluster: "devnet".into(),
         network: ZcashNetwork::Mainnet,

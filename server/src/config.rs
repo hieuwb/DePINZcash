@@ -24,6 +24,8 @@ pub struct Config {
     pub rate_limit_enabled: bool,
     pub rate_limit_per_second: u64,
     pub rate_limit_burst: u32,
+    // Kill-switch for new node registration. Existing nodes keep working.
+    pub registration_enabled: bool,
     // $ZePIN (SPL) reward mint — referenced by snapshot publisher and surfaced to clients.
     pub spl_mint: Option<String>,
     pub solana_cluster: String,
@@ -115,6 +117,11 @@ impl Config {
             .and_then(|s| s.parse().ok())
             .unwrap_or(30);
 
+        let registration_enabled = !matches!(
+            std::env::var("REGISTRATION_ENABLED").unwrap_or_default().to_lowercase().as_str(),
+            "false" | "0" | "no" | "off"
+        );
+
         let spl_mint = std::env::var("SPL_MINT").ok().filter(|s| !s.is_empty());
         let solana_cluster = std::env::var("SOLANA_CLUSTER").unwrap_or_else(|_| "devnet".to_string());
 
@@ -142,6 +149,7 @@ impl Config {
             rate_limit_enabled,
             rate_limit_per_second,
             rate_limit_burst,
+            registration_enabled,
             spl_mint,
             solana_cluster,
             network,

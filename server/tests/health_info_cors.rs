@@ -36,6 +36,7 @@ fn cfg(cors: Vec<String>, mint: Option<String>) -> Config {
         rate_limit_enabled: false,
         rate_limit_per_second: 1000,
         rate_limit_burst: 5000,
+        registration_enabled: true,
         spl_mint: mint,
         solana_cluster: "mainnet-beta".into(),
         network: ZcashNetwork::Mainnet,

@@ -73,6 +73,9 @@ pub async fn register(
     State(state): State<AppState>,
     Json(req): Json<RegisterRequest>,
 ) -> AppResult<Json<RegisterResponse>> {
+    if !state.config().registration_enabled {
+        return Err(AppError::Forbidden);
+    }
     let kind = NodeKind::parse(&req.kind)
         .ok_or_else(|| AppError::bad_request(format!("unknown node kind: {}", req.kind)))?;
 

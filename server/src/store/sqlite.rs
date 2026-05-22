@@ -422,12 +422,17 @@ impl SqliteStore {
     // ---- stats --------------------------------------------------------------
 
     pub async fn network_stats(&self, network: &str) -> anyhow::Result<NetworkStats> {
-        let total_nodes: i64 = sqlx::query_scalar("SELECT COUNT(1) FROM nodes WHERE network = ?1")
-            .bind(network)
-            .fetch_one(&self.pool)
-            .await?;
+        // Only count nodes that have produced at least one accepted proof.
+        // Sign-up-only bots never get last_proof_at set, so they don't inflate
+        // the public counter.
+        let total_nodes: i64 = sqlx::query_scalar(
+            "SELECT COUNT(1) FROM nodes WHERE network = ?1 AND last_proof_at IS NOT NULL",
+        )
+        .bind(network)
+        .fetch_one(&self.pool)
+        .await?;
         let active_nodes: i64 = sqlx::query_scalar(
-            "SELECT COUNT(1) FROM nodes WHERE network = ?1 AND status = 'active'",
+            "SELECT COUNT(1) FROM nodes WHERE network = ?1 AND status = 'active' AND last_proof_at IS NOT NULL",
         )
         .bind(network)
         .fetch_one(&self.pool)
