@@ -19,6 +19,7 @@ primary_region = "iad"
   CHALLENGE_CHECK_INTERVAL = "60s"
   UPTIME_REWARD_INTERVAL = "300s"
   SNAPSHOT_INTERVAL = "7d"
+  EXPOSED_RPC_POLL_INTERVAL = "5m"
 
 # Secrets (set via `fly secrets set`):
 #   ADMIN_API_KEY=<openssl rand -hex 32>

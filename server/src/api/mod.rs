@@ -48,6 +48,8 @@ pub fn router(state: AppState) -> Router {
         .route("/readyz", get(health::readyz))
         .route("/api/info", get(health::info))
         .route("/api/nodes/:id", get(nodes::get_by_id))
+        .route("/api/nodes/:id/proofs", get(nodes::list_proofs))
+        .route("/api/nodes/:id/series", get(nodes::daily_series))
         .route("/api/wallet/:wallet/nodes", get(nodes::list_for_wallet))
         .route("/api/wallet/:wallet/stats", get(stats::wallet_stats))
         .route("/api/wallet/:wallet/proofs", get(proofs::list_for_wallet))

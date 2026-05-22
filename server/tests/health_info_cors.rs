@@ -30,6 +30,7 @@ fn cfg(cors: Vec<String>, mint: Option<String>) -> Config {
         challenge_check_interval: Duration::from_secs(60),
         uptime_reward_interval: Duration::from_secs(60),
         snapshot_interval: None,
+        exposed_rpc_poll_interval: None,
         max_height_drift: 8,
         max_clock_skew: Duration::from_secs(15 * 60),
         rate_limit_enabled: false,
@@ -96,6 +97,7 @@ async fn api_info_carries_config_fields() {
     assert_eq!(body["solana_cluster"], "mainnet-beta");
     assert_eq!(body["spl_mint"], mint);
     assert_eq!(body["scheduler_enabled"], false);
+    assert_eq!(body["exposed_rpc_enabled"], false);
     assert!(body["version"].as_str().is_some());
     assert!(body["rewards_note"].as_str().unwrap().contains("$ZePIN"));
     assert!(body["registration_message_v1"]

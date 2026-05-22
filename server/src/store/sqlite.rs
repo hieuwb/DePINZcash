@@ -9,8 +9,8 @@ use std::time::Duration;
 use uuid::Uuid;
 
 use crate::types::{
-    Challenge, ChallengeKind, ChallengeStatus, NetworkStats, Node, NodeKind, NodeStatus, Proof,
-    ProofVerdict, WalletStats,
+    Challenge, ChallengeKind, ChallengeStatus, NetworkStats, Node, NodeDailyBucket, NodeKind,
+    NodeStatus, Proof, ProofVerdict, WalletStats,
 };
 
 #[derive(Clone)]
@@ -112,6 +112,24 @@ impl SqliteStore {
                 FROM nodes WHERE wallet = ?1 ORDER BY registered_at ASC"#,
         )
         .bind(wallet)
+        .fetch_all(&self.pool)
+        .await?;
+        rows.into_iter().map(node_from_row).collect()
+    }
+
+    // Nodes that registered with an exposed JSON-RPC URL — the targets for the
+    // exposed_rpc_loop poller.
+    pub async fn list_nodes_with_rpc(&self, network: &str) -> anyhow::Result<Vec<Node>> {
+        let rows = sqlx::query(
+            r#"SELECT id, wallet, kind, label, rpc_endpoint, network, status,
+                last_height, last_block_hash, last_proof_at, registered_at, points, uptime_seconds
+                FROM nodes
+                WHERE network = ?1
+                  AND rpc_endpoint IS NOT NULL
+                  AND status != 'suspended'
+                ORDER BY registered_at ASC"#,
+        )
+        .bind(network)
         .fetch_all(&self.pool)
         .await?;
         rows.into_iter().map(node_from_row).collect()
@@ -274,6 +292,42 @@ impl SqliteStore {
         .fetch_one(&self.pool)
         .await?;
         Ok(count)
+    }
+
+    // Daily aggregates for a node, oldest first. Used by the per-node dashboard's
+    // bar chart — date strings are ISO yyyy-mm-dd derived from received_at.
+    pub async fn node_daily_series(
+        &self,
+        node_id: Uuid,
+        days: i64,
+    ) -> anyhow::Result<Vec<NodeDailyBucket>> {
+        let days = days.clamp(1, 90);
+        let rows = sqlx::query(
+            r#"SELECT substr(received_at, 1, 10) AS day,
+                      COUNT(1) AS proofs,
+                      SUM(CASE WHEN verdict = 'accepted' THEN 1 ELSE 0 END) AS accepted,
+                      COALESCE(SUM(points_awarded), 0) AS points
+               FROM proofs
+               WHERE node_id = ?1
+                 AND received_at >= datetime('now', '-' || ?2 || ' days')
+               GROUP BY day
+               ORDER BY day ASC"#,
+        )
+        .bind(node_id.to_string())
+        .bind(days)
+        .fetch_all(&self.pool)
+        .await?;
+
+        rows.into_iter()
+            .map(|r| {
+                Ok(NodeDailyBucket {
+                    day: r.try_get("day")?,
+                    proofs: r.try_get::<i64, _>("proofs")? as u64,
+                    accepted: r.try_get::<i64, _>("accepted")? as u64,
+                    points: r.try_get::<i64, _>("points")? as u64,
+                })
+            })
+            .collect()
     }
 
     pub async fn last_accepted_proof_for_node(&self, node_id: Uuid) -> anyhow::Result<Option<Proof>> {

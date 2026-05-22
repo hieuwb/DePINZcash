@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
-import { useWallet } from "@solana/wallet-adapter-react";
+import { useConnection, useWallet } from "@solana/wallet-adapter-react";
 import { WalletMultiButton } from "@solana/wallet-adapter-react-ui";
 
 import {
@@ -12,6 +12,8 @@ import {
 } from "../lib/api";
 import { ErrorBanner, Loading } from "../components/Loading";
 import { formatNumber, formatRelative, formatUptime, shortAddress } from "../lib/format";
+import { sendClaim } from "../lib/claim";
+import { isClaimProgramLive } from "../lib/config";
 
 export function Dashboard() {
   const wallet = useWallet();
@@ -147,7 +149,14 @@ function WalletDashboard({ wallet }: { wallet: string }) {
               <tbody>
                 {nodes.map((n) => (
                   <tr key={n.id} className="border-b border-zcash-border/60 last:border-b-0">
-                    <td className="px-4 py-2">{n.label || <span className="text-zcash-subtle">—</span>}</td>
+                    <td className="px-4 py-2">
+                      <Link
+                        to={`/node/${encodeURIComponent(n.id)}`}
+                        className="text-zcash-text hover:text-zcash-gold"
+                      >
+                        {n.label || <span className="text-zcash-subtle">unlabeled</span>}
+                      </Link>
+                    </td>
                     <td className="px-4 py-2">
                       <span className="pill">{n.kind}</span>
                     </td>
@@ -184,15 +193,92 @@ function WalletDashboard({ wallet }: { wallet: string }) {
               <Kv label="Merkle root" value={shortAddress(claim.merkle_root, 8, 8)} mono />
               <Kv label="Leaf hash" value={shortAddress(claim.leaf_hash, 8, 8)} mono />
             </div>
+            <ClaimButton claim={claim} target={wallet} />
             <details className="rounded-md border border-zcash-border bg-zcash-dark p-3 text-xs">
               <summary className="cursor-pointer text-zcash-subtle">
-                Full Merkle proof JSON (paste into the Solana claim program once it ships)
+                Full Merkle proof JSON (raw payload)
               </summary>
               <pre className="mt-2 overflow-x-auto font-mono leading-5">{JSON.stringify(claim, null, 2)}</pre>
             </details>
           </div>
         )}
       </section>
+    </div>
+  );
+}
+
+function ClaimButton({ claim, target }: { claim: ClaimPayload; target: string }) {
+  const wallet = useWallet();
+  const { connection } = useConnection();
+  const [busy, setBusy] = useState(false);
+  const [signature, setSignature] = useState<string | null>(null);
+  const [err, setErr] = useState<string | null>(null);
+
+  if (!isClaimProgramLive()) {
+    return (
+      <div className="rounded-md border border-zcash-border bg-zcash-dark/60 p-3 text-xs text-zcash-subtle">
+        On-chain claim program is shipping next. The Merkle proof below is the
+        exact payload the program will verify — once the program is deployed and
+        the snapshot cycle is initialized, the claim button appears here.
+      </div>
+    );
+  }
+
+  const ownerMatch = wallet.publicKey?.toBase58() === target && target === claim.wallet;
+  const disabled = !wallet.connected || !wallet.publicKey || !wallet.signTransaction || !ownerMatch || busy;
+
+  async function onClaim() {
+    if (!wallet.publicKey || !wallet.signTransaction) return;
+    setBusy(true);
+    setErr(null);
+    setSignature(null);
+    try {
+      const sig = await sendClaim(connection, wallet.publicKey, claim, async (tx) => {
+        const signed = await wallet.signTransaction!(tx);
+        const raw = signed.serialize();
+        const txSig = await connection.sendRawTransaction(raw);
+        await connection.confirmTransaction(txSig, "confirmed");
+        return txSig;
+      });
+      setSignature(sig);
+    } catch (e: unknown) {
+      setErr(e instanceof Error ? e.message : String(e));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="flex flex-col gap-2">
+      <div className="flex flex-wrap items-center gap-3">
+        <button
+          type="button"
+          onClick={onClaim}
+          disabled={disabled}
+          className="rounded-md bg-zcash-gold px-4 py-2 text-sm font-semibold text-zcash-dark transition hover:bg-amber-300 disabled:cursor-not-allowed disabled:bg-zcash-border disabled:text-zcash-subtle"
+        >
+          {busy ? "Submitting…" : `Claim ${formatNumber(claim.points)} $ZePIN`}
+        </button>
+        {!ownerMatch && (
+          <span className="text-xs text-zcash-subtle">
+            Connect the wallet that owns this dashboard to claim.
+          </span>
+        )}
+      </div>
+      {signature && (
+        <p className="text-xs text-emerald-300">
+          Claimed. Tx:{" "}
+          <a
+            className="underline"
+            target="_blank"
+            rel="noreferrer"
+            href={`https://solscan.io/tx/${signature}`}
+          >
+            {shortAddress(signature, 8, 8)}
+          </a>
+        </p>
+      )}
+      {err && <p className="text-xs text-red-300">{err}</p>}
     </div>
   );
 }

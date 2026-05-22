@@ -42,4 +42,12 @@ export const config = {
     import.meta.env.VITE_SOLANA_RPC_URL,
     "https://solana-rpc.publicnode.com",
   ),
+  // Set this to the deployed zepin-claim program id to enable the on-chain
+  // claim button. While empty, the UI shows "claim program ships soon" and
+  // exposes the Merkle proof JSON for manual / future redemption.
+  claimProgramId: envStr(import.meta.env.VITE_CLAIM_PROGRAM_ID, ""),
 };
+
+export function isClaimProgramLive(): boolean {
+  return config.claimProgramId.length > 0;
+}

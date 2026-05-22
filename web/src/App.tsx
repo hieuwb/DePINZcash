@@ -5,6 +5,7 @@ import { AppFooter } from "./components/AppFooter";
 import { Home } from "./pages/Home";
 import { Register } from "./pages/Register";
 import { Dashboard } from "./pages/Dashboard";
+import { NodeDetail } from "./pages/NodeDetail";
 import { Leaderboard } from "./pages/Leaderboard";
 import { RunNode } from "./pages/RunNode";
 import { RunLightwalletd } from "./pages/RunLightwalletd";
@@ -20,6 +21,7 @@ export function App() {
           <Route path="/register" element={<Register />} />
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/dashboard/:wallet" element={<Dashboard />} />
+          <Route path="/node/:id" element={<NodeDetail />} />
           <Route path="/leaderboard" element={<Leaderboard />} />
           <Route path="/run-node" element={<RunNode />} />
           <Route path="/run-lightwalletd" element={<RunLightwalletd />} />

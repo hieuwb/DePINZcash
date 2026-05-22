@@ -35,6 +35,7 @@ fn test_config() -> Config {
         challenge_check_interval: Duration::from_secs(60),
         uptime_reward_interval: Duration::from_secs(60),
         snapshot_interval: None,
+        exposed_rpc_poll_interval: None,
         max_height_drift: 8,
         max_clock_skew: Duration::from_secs(15 * 60),
         rate_limit_enabled: false,

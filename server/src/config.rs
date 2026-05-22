@@ -15,6 +15,9 @@ pub struct Config {
     pub challenge_check_interval: Duration,
     pub uptime_reward_interval: Duration,
     pub snapshot_interval: Option<Duration>,
+    // Exposed RPC poll: server polls each node's public RPC every N seconds and
+    // verifies against the trusted quorum. Set to None to disable.
+    pub exposed_rpc_poll_interval: Option<Duration>,
     pub max_height_drift: u64,
     pub max_clock_skew: Duration,
     // Rate limiting (per-IP token bucket).
@@ -85,6 +88,12 @@ impl Config {
             Some(other) => Some(parse_duration_str(other)?),
         };
 
+        // Defaults to off — opt-in via env so private deploys don't auto-poll.
+        let exposed_rpc_poll_interval = match std::env::var("EXPOSED_RPC_POLL_INTERVAL").ok().as_deref() {
+            None | Some("") | Some("0" | "off" | "false" | "no" | "disabled") => None,
+            Some(other) => Some(parse_duration_str(other)?),
+        };
+
         let max_height_drift = std::env::var("MAX_HEIGHT_DRIFT")
             .ok()
             .map(|s| s.parse::<u64>())
@@ -127,6 +136,7 @@ impl Config {
             challenge_check_interval,
             uptime_reward_interval,
             snapshot_interval,
+            exposed_rpc_poll_interval,
             max_height_drift,
             max_clock_skew,
             rate_limit_enabled,

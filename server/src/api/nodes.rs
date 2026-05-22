@@ -1,5 +1,5 @@
 use axum::{
-    extract::{Path, State},
+    extract::{Path, Query, State},
     Json,
 };
 use chrono::{DateTime, Utc};
@@ -10,7 +10,7 @@ use crate::{
     auth::{self, AuthError},
     error::{AppError, AppResult},
     state::AppState,
-    types::{Node, NodeKind, NodeStatus},
+    types::{Node, NodeDailyBucket, NodeKind, NodeStatus, Proof},
 };
 
 #[derive(Debug, Deserialize)]
@@ -156,6 +156,48 @@ pub async fn list_for_wallet(
     auth::decode_solana_pubkey(&wallet).map_err(AppError::from)?;
     let nodes = state.store().list_nodes_by_wallet(&wallet).await?;
     Ok(Json(nodes.iter().map(PublicNode::from).collect()))
+}
+
+#[derive(Debug, Deserialize)]
+pub struct ProofsQuery {
+    #[serde(default = "default_proof_limit")]
+    pub limit: i64,
+}
+
+fn default_proof_limit() -> i64 {
+    100
+}
+
+pub async fn list_proofs(
+    State(state): State<AppState>,
+    Path(id): Path<Uuid>,
+    Query(q): Query<ProofsQuery>,
+) -> AppResult<Json<Vec<Proof>>> {
+    // Ensure the node exists so callers get 404 vs an empty list ambiguity.
+    state.store().get_node(id).await?.ok_or(AppError::NotFound)?;
+    let limit = q.limit.clamp(1, 500);
+    let proofs = state.store().list_proofs_by_node(id, limit).await?;
+    Ok(Json(proofs))
+}
+
+#[derive(Debug, Deserialize)]
+pub struct SeriesQuery {
+    #[serde(default = "default_series_days")]
+    pub days: i64,
+}
+
+fn default_series_days() -> i64 {
+    14
+}
+
+pub async fn daily_series(
+    State(state): State<AppState>,
+    Path(id): Path<Uuid>,
+    Query(q): Query<SeriesQuery>,
+) -> AppResult<Json<Vec<NodeDailyBucket>>> {
+    state.store().get_node(id).await?.ok_or(AppError::NotFound)?;
+    let series = state.store().node_daily_series(id, q.days).await?;
+    Ok(Json(series))
 }
 
 fn validate_rpc_endpoint(endpoint: &str) -> AppResult<()> {

@@ -157,16 +157,18 @@ export function Home() {
         <article className="card flex flex-col gap-3">
           <div className="flex items-center justify-between">
             <h3 className="text-base font-semibold">Exposed RPC mode</h3>
-            <span className="inline-flex items-center gap-1 rounded-full border border-zcash-warn/40 bg-zcash-warn/10 px-2 py-0.5 text-[10px] uppercase tracking-wider text-amber-200">
-              Coming soon
+            <span className="inline-flex items-center gap-1 rounded-full border border-zcash-success/40 bg-zcash-success/10 px-2 py-0.5 text-[10px] uppercase tracking-wider text-emerald-300">
+              <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" /> Active now
             </span>
           </div>
           <p className="text-sm text-zcash-subtle">
-            Zero install from us. You expose Zebra's JSON-RPC on a public URL and we poll
-            it every few minutes — same verification, no relay binary. Better for operators
+            Zero install from us. Expose Zebra's JSON-RPC on a public URL and we poll
+            it every few minutes — same verification, no relay binary. Best for operators
             who want a truly turnkey setup.
           </p>
-          <span className="text-sm text-zcash-subtle">Not yet enabled.</span>
+          <Link to="/register" className="text-sm text-zcash-gold hover:underline">
+            Register with an RPC URL →
+          </Link>
         </article>
       </section>
 

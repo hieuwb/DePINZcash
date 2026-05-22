@@ -28,6 +28,8 @@ pub async fn info(State(state): State<AppState>) -> Json<Value> {
         "spl_mint": cfg.spl_mint,
         "solana_cluster": cfg.solana_cluster,
         "scheduler_enabled": cfg.scheduler_enabled,
+        "exposed_rpc_enabled": cfg.exposed_rpc_poll_interval.is_some(),
+        "exposed_rpc_poll_seconds": cfg.exposed_rpc_poll_interval.map(|d| d.as_secs()),
         // Operators care about this — what message do they need to sign?
         "registration_message_v1": "depinzcash:register:v1\\n<wallet>\\n<nonce>\\n<rfc3339-ts>\\n<kind>\\n<network>\\n<label>\\n",
         // Until NU7 + ZIP-227 ship Zcash custom assets, rewards are paid in $ZePIN on Solana.

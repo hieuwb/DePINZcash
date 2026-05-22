@@ -174,6 +174,14 @@ pub struct Challenge {
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct NodeDailyBucket {
+    pub day: String,
+    pub proofs: u64,
+    pub accepted: u64,
+    pub points: u64,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct WalletStats {
     pub wallet: String,
     pub nodes: u32,

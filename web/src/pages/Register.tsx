@@ -150,7 +150,7 @@ export function Register() {
               </p>
             </div>
             <div>
-              <label className="stat-label" htmlFor="rpc">Public RPC URL <span className="text-zcash-subtle/70">(optional)</span></label>
+              <label className="stat-label" htmlFor="rpc">Public RPC URL <span className="text-zcash-subtle/70">(optional — enables Exposed RPC mode)</span></label>
               <input
                 id="rpc"
                 className="input mt-1"
@@ -158,6 +158,10 @@ export function Register() {
                 onChange={(e) => setRpcEndpoint(e.target.value)}
                 placeholder="https://zebra.example.com:8232"
               />
+              <p className="mt-1 text-[10px] text-zcash-subtle">
+                Set this and the server polls your node every 5 minutes — no relay binary
+                needed. Leave empty if you'll run the relay CLI instead.
+              </p>
             </div>
             {error && <ErrorBanner message={error} />}
             <button
@@ -179,6 +183,7 @@ export function Register() {
 }
 
 function RegistrationReceipt({ resp }: { resp: RegisterResponse }) {
+  const exposedRpc = !!resp.node.rpc_endpoint;
   const cli = `# In your relay state file (default: config/relay-state.json)
 {
   "api": "${config.apiUrl}",
@@ -194,6 +199,15 @@ function RegistrationReceipt({ resp }: { resp: RegisterResponse }) {
       <div className="rounded-md border border-zcash-success/40 bg-zcash-success/10 px-3 py-2 text-sm text-emerald-200">
         Node registered. Save the auth token below — it's shown once.
       </div>
+      {exposedRpc && (
+        <div className="rounded-md border border-zcash-gold/40 bg-zcash-gold/5 px-3 py-2 text-sm">
+          <span className="font-semibold text-zcash-gold">Exposed RPC mode active.</span>{" "}
+          <span className="text-zcash-text">
+            The server will start polling <code className="text-zcash-text">{resp.node.rpc_endpoint}</code>{" "}
+            every 5 minutes — no relay install needed. You can skip the JSON below.
+          </span>
+        </div>
+      )}
       <div className="grid gap-2 text-sm">
         <Row label="Node ID" value={resp.node.id} />
         <Row label="Wallet" value={shortAddress(resp.node.wallet, 8, 8)} />

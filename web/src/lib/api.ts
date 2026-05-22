@@ -47,6 +47,8 @@ export interface ServerInfo {
   spl_mint: string | null;
   solana_cluster: string;
   scheduler_enabled: boolean;
+  exposed_rpc_enabled: boolean;
+  exposed_rpc_poll_seconds: number | null;
   registration_message_v1: string;
   rewards_note: string;
 }
@@ -64,6 +66,29 @@ export interface RegisterRequest {
 export interface RegisterResponse {
   node: PublicNode;
   auth_token: string;
+}
+
+export interface ProofRecord {
+  id: string;
+  node_id: string;
+  wallet: string;
+  claimed_height: number;
+  claimed_block_hash: string;
+  proof_timestamp: string;
+  binary_hash: string | null;
+  uptime_seconds: number | null;
+  peers: number | null;
+  verdict: string;
+  reject_reason: string | null;
+  points_awarded: number;
+  received_at: string;
+}
+
+export interface NodeDailyBucket {
+  day: string;
+  proofs: number;
+  accepted: number;
+  points: number;
 }
 
 export interface ClaimPayload {
@@ -143,6 +168,11 @@ export const api = {
     }),
   latestClaim: (wallet: string) =>
     request<ClaimPayload>(`/api/wallet/${encodeURIComponent(wallet)}/claim/latest`),
+  node: (id: string) => request<PublicNode>(`/api/nodes/${encodeURIComponent(id)}`),
+  nodeProofs: (id: string, limit = 100) =>
+    request<ProofRecord[]>(`/api/nodes/${encodeURIComponent(id)}/proofs?limit=${limit}`),
+  nodeSeries: (id: string, days = 14) =>
+    request<NodeDailyBucket[]>(`/api/nodes/${encodeURIComponent(id)}/series?days=${days}`),
 };
 
 export { ApiError };

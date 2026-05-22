@@ -247,13 +247,14 @@ listen_addr = "127.0.0.1:8232"`}</Code>
           <div className="card flex flex-col gap-2">
             <div className="flex items-center justify-between">
               <h3 className="text-sm font-semibold">Exposed RPC</h3>
-              <span className="inline-flex items-center gap-1 rounded-full border border-zcash-warn/40 bg-zcash-warn/10 px-2 py-0.5 text-[10px] uppercase tracking-wider text-amber-200">
-                Coming soon
+              <span className="inline-flex items-center gap-1 rounded-full border border-zcash-success/40 bg-zcash-success/10 px-2 py-0.5 text-[10px] uppercase tracking-wider text-emerald-300">
+                <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" /> Active now
               </span>
             </div>
             <p className="text-sm text-zcash-subtle">
-              No relay needed — you simply expose Zebra's JSON-RPC publicly and we poll
-              your node. Zero install from us. Not yet enabled; ETA next milestone.
+              No relay needed — expose Zebra's JSON-RPC on a public URL and the server
+              polls it every 5 minutes. Same verification, zero install on your side.
+              Use the registration form with your RPC URL set.
             </p>
           </div>
         </div>
