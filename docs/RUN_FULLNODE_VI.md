@@ -224,6 +224,28 @@ Dung de xem nhanh cac thong tin quan trong:
 
 Neu status tren API la `stale` nhung proof gan nhat van `accepted`, thuong la backend/API cap nhat cham hoac node dang sync cham. Kiem tra them logs relay va Zebra trong cung man hinh nay.
 
+Neu relay log lien tuc bao:
+
+```text
+submit failed (404 Not Found): {"error":"not_found","message":"not found"}
+```
+
+thi `node_id` trong `relay-state.json` khong con ton tai tren API hien tai. Truong hop nay co the xay ra neu backend reset database, node bi xoa, hoac ban dang dung sai API. Nen dung relay de tranh spam loi:
+
+```bash
+sudo systemctl stop depinzcash-relay
+```
+
+Sau khi API mo dang ky lai, backup state cu va dang ky lai:
+
+```bash
+cp ~/.depinzcash/config/relay-state.json ~/.depinzcash/config/relay-state.json.bak
+rm ~/.depinzcash/config/relay-state.json
+./scripts/depinzcash-node.sh
+```
+
+Sau do chon `3) Dang ky truc tiep bang terminal` hoac dang ky tren web roi chon `2) Nhap Node ID va Auth Token`.
+
 ### 8. Them node bang Docker Compose
 
 Dung khi muon chay them node thu 2, thu 3 tren cung VPS. Muc nay goi script rieng:

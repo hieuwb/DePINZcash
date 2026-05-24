@@ -635,6 +635,26 @@ check_node_status() {
   fi
 
   if command_exists jq; then
+    local api_error api_message
+    api_error="$(echo "$node_json" | jq -r '.error // empty' 2>/dev/null || true)"
+    api_message="$(echo "$node_json" | jq -r '.message // empty' 2>/dev/null || true)"
+    if [[ -n "$api_error" ]]; then
+      echo "API tra loi loi: $api_error ${api_message:+- $api_message}"
+      if [[ "$api_error" == "not_found" ]]; then
+        echo
+        echo "Node ID trong relay-state.json khong ton tai tren API hien tai."
+        echo "Relay se tiep tuc bi 404 cho toi khi ban dang ky lai node va cap nhat relay-state.json."
+        echo "Nen dung relay de tranh spam 404:"
+        echo "  sudo systemctl stop $SERVICE_NAME"
+        echo
+        echo "Khi API mo dang ky lai, backup state cu roi dang ky lai voi label moi hoac cung label neu server cho phep."
+        echo "  cp $STATE_FILE $STATE_FILE.bak"
+        echo "  rm $STATE_FILE"
+        echo "  ./scripts/depinzcash-node.sh"
+      fi
+      return
+    fi
+
     echo "$node_json" | jq '{
       id,
       status,
@@ -647,15 +667,21 @@ check_node_status() {
     }'
     proofs_json="$(curl -s --max-time 20 "$API_ENDPOINT/api/nodes/$node_id/proofs?limit=5" || true)"
     if [[ -n "$proofs_json" ]]; then
+      local proofs_type
+      proofs_type="$(echo "$proofs_json" | jq -r 'type' 2>/dev/null || true)"
       echo
       echo "Proofs gan nhat:"
-      echo "$proofs_json" | jq '.[] | {
-        claimed_height,
-        verdict,
-        points_awarded,
-        received_at,
-        reject_reason
-      }'
+      if [[ "$proofs_type" == "array" ]]; then
+        echo "$proofs_json" | jq '.[] | {
+          claimed_height,
+          verdict,
+          points_awarded,
+          received_at,
+          reject_reason
+        }'
+      else
+        echo "$proofs_json" | jq .
+      fi
     fi
   else
     echo "$node_json"
