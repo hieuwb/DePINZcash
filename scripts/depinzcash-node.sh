@@ -664,6 +664,7 @@ main_menu() {
     echo "5) Xuat key vi"
     echo "6) Update script/node"
     echo "7) Kiem tra trang thai node"
+    echo "8) Them node bang Docker Compose"
     echo "0) Thoat"
     echo
     read -r -p "Chon: " choice
@@ -675,6 +676,7 @@ main_menu() {
       5) export_wallet_key; read -r -p "Nhan Enter de quay lai menu..." ;;
       6) update_script_and_node; read -r -p "Nhan Enter de quay lai menu..." ;;
       7) check_node_status; read -r -p "Nhan Enter de quay lai menu..." ;;
+      8) "$REPO_DIR/scripts/depinzcash-compose-node.sh" ;;
       0) exit 0 ;;
       *) echo "Lua chon khong hop le."; sleep 1 ;;
     esac

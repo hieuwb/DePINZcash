@@ -133,6 +133,7 @@ REGISTER_RETRY_SECS=120 ./scripts/depinzcash-node.sh
 5) Xuat key vi
 6) Update script/node
 7) Kiem tra trang thai node
+8) Them node bang Docker Compose
 0) Thoat
 ```
 
@@ -216,6 +217,35 @@ Dung de xem nhanh cac thong tin quan trong:
 - 5 proof gan nhat va ly do reject neu co.
 
 Neu status tren API la `stale` nhung proof gan nhat van `accepted`, thuong la backend/API cap nhat cham hoac node dang sync cham. Kiem tra them logs relay va Zebra trong cung man hinh nay.
+
+### 8. Them node bang Docker Compose
+
+Dung khi muon chay them node thu 2, thu 3 tren cung VPS. Muc nay goi script rieng:
+
+```bash
+./scripts/depinzcash-compose-node.sh
+```
+
+Node phu se dung container, volume, port RPC, port P2P, relay state va systemd service rieng. Mac dinh node thu 2 dung:
+
+- Container: `depinzcash-zebra-2`
+- Volume: `depinzcash-zebra-2-state`
+- RPC local: `http://127.0.0.1:18232`
+- P2P port: `18233`
+- Relay state: `~/.depinzcash/node-2/relay-state.json`
+- Relay service: `depinzcash-relay-2`
+
+Flow node thu 2:
+
+```text
+8) Them node bang Docker Compose
+1) Chay Zebra node phu bang Docker Compose
+2) Dang ky node phu truc tiep bang terminal
+```
+
+Khi dang ky node phu, dung cung wallet nhung label phai khac node cu, vi du `hieuwb-2`.
+
+Luu y: node phu tren cung VPS phai dung port khac `8232/8233` de khong dung node chinh. P2P port khac `8233` van sync duoc bang outbound peers, nhung inbound peers co the it hon node chinh.
 
 ## Cac lenh kiem tra huu ich
 

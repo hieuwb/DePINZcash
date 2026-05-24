@@ -1,0 +1,17 @@
+services:
+  zebra:
+    image: zfnd/zebra:latest
+    container_name: ${ZEBRA_CONTAINER:-depinzcash-zebra-2}
+    restart: unless-stopped
+    environment:
+      ZEBRA_RPC__LISTEN_ADDR: 0.0.0.0:8232
+      ZEBRA_RPC__ENABLE_COOKIE_AUTH: "false"
+    ports:
+      - "127.0.0.1:${ZEBRA_RPC_PORT:-18232}:8232"
+      - "${ZEBRA_P2P_PORT:-18233}:8233"
+    volumes:
+      - zebra-state:/home/zebra/.cache/zebra
+
+volumes:
+  zebra-state:
+    name: ${ZEBRA_VOLUME:-depinzcash-zebra-2-state}
