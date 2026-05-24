@@ -291,6 +291,11 @@ register_from_terminal() {
       continue
     fi
 
+    if grep -qi "403 Forbidden\\|\"error\":\"forbidden\"" "$log_file"; then
+      rm -f "$log_file"
+      die "API dang tu choi dang ky (403 Forbidden). Thuong la server dang tat REGISTRATION_ENABLED hoac tam dong dang ky. Dang ky tren web cung se bi loi cho toi khi backend mo lai."
+    fi
+
     rm -f "$log_file"
     die "Dang ky that bai voi loi khong phai rate limit."
   done
