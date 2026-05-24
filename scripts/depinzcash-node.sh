@@ -443,6 +443,13 @@ register_from_terminal() {
       continue
     fi
 
+    if grep -qi "operation timed out\\|error sending request\\|connection refused\\|connection reset\\|dns error\\|network is unreachable" "$log_file"; then
+      echo "Loi network/API timeout. Cho ${retry_secs}s roi thu lai..."
+      sleep "$retry_secs"
+      attempt=$((attempt + 1))
+      continue
+    fi
+
     if grep -qi "403 Forbidden\\|\"error\":\"forbidden\"" "$log_file"; then
       echo "API dang tu choi dang ky (403 Forbidden). Co the server dang tat REGISTRATION_ENABLED/tam dong dang ky."
       echo "Cho ${forbidden_retry_secs}s roi thu lai. Bam Ctrl+C de dung."
@@ -452,7 +459,7 @@ register_from_terminal() {
     fi
 
     rm -f "$log_file"
-    die "Dang ky that bai voi loi khong phai rate limit. Xem thong bao o tren."
+    die "Dang ky that bai voi loi khong thuoc nhom retry. Xem thong bao o tren."
   done
 }
 
