@@ -41,6 +41,7 @@ Script se tu dong:
 - Muc `2) Nhap Node ID va Auth Token` se tao relay state va bat service `depinzcash-relay`.
 - Muc `3) Dang ky truc tiep bang terminal` se goi `depinzcash-relay register`, gap rate limit thi cho roi thu lai.
 - Neu chua co `Node ID/Auth Token`, dung muc `5) Xuat key vi` de len web register truoc.
+- Muc `6) Update script/node` se pull code moi, build lai relay, restart relay neu da cau hinh, va tuy chon update Zebra Docker image.
 
 ## Flow dung
 
@@ -130,6 +131,7 @@ REGISTER_RETRY_SECS=120 ./scripts/depinzcash-node.sh
 3) Dang ky truc tiep bang terminal
 4) Xem logs
 5) Xuat key vi
+6) Update script/node
 0) Thoat
 ```
 
@@ -182,6 +184,24 @@ File key nam tai:
 ~/.depinzcash/config/solana-keypair.json
 ```
 
+### 6. Update script/node
+
+Dung de cap nhat code moi tu GitHub:
+
+- Chay `git fetch --all --prune`.
+- Chay `git pull --ff-only`.
+- Build lai `depinzcash-relay`.
+- Restart/cap nhat service `depinzcash-relay` neu da co `relay-state.json`.
+- Hoi rieng truoc khi pull image `zfnd/zebra:latest` va restart Zebra container.
+
+Update khong xoa key vi, khong xoa `relay-state.json`, va khong xoa volume `zebra-state`.
+
+Link xem commits moi:
+
+```text
+https://github.com/ZcashDePIN/DePINZcash/commits/main/
+```
+
 ## Cac lenh kiem tra huu ich
 
 Kiem tra Zebra container:
@@ -216,6 +236,7 @@ curl -s -H 'Content-Type: application/json' \
 - Nen backup file `~/.depinzcash/config/relay-state.json` sau khi da dan `Node ID/Auth Token`.
 - Neu xoa volume Docker `zebra-state`, Zebra se phai sync lai tu dau.
 - Neu xoa keypair, node moi se dung vi moi va khong trung voi vi da dung tren web truoc do.
+- Neu repo co thay doi local, muc update se canh bao truoc khi pull.
 
 ## Cau hinh nang cao
 

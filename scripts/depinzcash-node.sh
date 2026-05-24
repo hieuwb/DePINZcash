@@ -14,6 +14,7 @@ SERVICE_NAME="depinzcash-relay"
 NODE_RPC="${NODE_RPC:-http://127.0.0.1:8232}"
 API_ENDPOINT="${DEPINZCASH_API:-$DEFAULT_API}"
 REGISTER_RETRY_SECS="${REGISTER_RETRY_SECS:-60}"
+UPDATE_COMMITS_URL="https://github.com/ZcashDePIN/DePINZcash/commits/main/"
 
 if [[ -z "$REPO_DIR" ]]; then
   SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -133,6 +134,73 @@ build_relay() {
     cd "$REPO_DIR/prover"
     cargo build --release --bin depinzcash-relay
   )
+}
+
+update_script_and_node() {
+  info "Bat dau update DePINZcash."
+  echo "Link xem update/commits: $UPDATE_COMMITS_URL"
+
+  ensure_repo
+  if ! command_exists git; then
+    install_packages
+  fi
+
+  set +e
+  (
+    cd "$REPO_DIR"
+    echo
+    echo "Repo hien tai: $REPO_DIR"
+    echo "Commit hien tai: $(git rev-parse --short HEAD 2>/dev/null || echo unknown)"
+
+    if ! git diff --quiet || ! git diff --cached --quiet; then
+      echo
+      echo "Canh bao: repo dang co thay doi local."
+      git status --short
+      echo
+      read -r -p "Van tiep tuc update bang git pull --ff-only? (y/N): " continue_update
+      if [[ ! "$continue_update" =~ ^[Yy]$ ]]; then
+        echo "Da huy update."
+        exit 10
+      fi
+    fi
+
+    git fetch --all --prune
+    git pull --ff-only
+    echo "Commit sau update: $(git rev-parse --short HEAD 2>/dev/null || echo unknown)"
+  )
+  local update_status=$?
+  set -e
+  if [[ "$update_status" -eq 10 ]]; then
+    return
+  fi
+  if [[ "$update_status" -ne 0 ]]; then
+    die "Git update that bai. Neu repo bi diverged/local changes, hay xu ly thu cong roi chay lai."
+  fi
+
+  ensure_rust
+  build_relay
+
+  if [[ -f "$STATE_FILE" ]]; then
+    install_systemd_service
+    info "Da restart/cap nhat service $SERVICE_NAME."
+  else
+    info "Chua co relay-state.json, bo qua restart relay."
+  fi
+
+  echo
+  read -r -p "Co pull image Zebra moi va restart container khong? (y/N): " update_zebra
+  if [[ "$update_zebra" =~ ^[Yy]$ ]]; then
+    ensure_docker_running
+    if docker ps >/dev/null 2>&1; then
+      docker pull zfnd/zebra:latest
+    else
+      need_sudo docker pull zfnd/zebra:latest
+    fi
+    start_zebra
+    info "Da update/restart Zebra container. Volume $ZEBRA_VOLUME duoc giu lai."
+  fi
+
+  info "Update hoan tat."
 }
 
 start_zebra() {
@@ -469,6 +537,7 @@ main_menu() {
     echo "3) Dang ky truc tiep bang terminal"
     echo "4) Xem logs"
     echo "5) Xuat key vi"
+    echo "6) Update script/node"
     echo "0) Thoat"
     echo
     read -r -p "Chon: " choice
@@ -478,6 +547,7 @@ main_menu() {
       3) register_from_terminal; read -r -p "Nhan Enter de quay lai menu..." ;;
       4) show_logs ;;
       5) export_wallet_key; read -r -p "Nhan Enter de quay lai menu..." ;;
+      6) update_script_and_node; read -r -p "Nhan Enter de quay lai menu..." ;;
       0) exit 0 ;;
       *) echo "Lua chon khong hop le."; sleep 1 ;;
     esac
