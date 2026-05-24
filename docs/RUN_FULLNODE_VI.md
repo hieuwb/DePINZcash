@@ -115,12 +115,18 @@ Neu khong muon dung web, chon:
 3) Dang ky truc tiep bang terminal
 ```
 
-Muc nay dung keypair tren VPS de chay `depinzcash-relay register`. Neu API tra `429 Too Many Requests`, script se cho 60 giay roi thu lai. Bam `Ctrl+C` de dung.
+Muc nay dung keypair tren VPS de chay `depinzcash-relay register`. Neu API tra `429 Too Many Requests`, script se cho 60 giay roi thu lai. Neu API tra `403 Forbidden` do tam dong dang ky, script se cho 300 giay roi thu lai. Bam `Ctrl+C` de dung.
 
 Co the doi thoi gian cho bang bien moi truong:
 
 ```bash
 REGISTER_RETRY_SECS=120 ./scripts/depinzcash-node.sh
+```
+
+Co the doi thoi gian cho khi API tra `403 Forbidden`:
+
+```bash
+REGISTER_FORBIDDEN_RETRY_SECS=600 ./scripts/depinzcash-node.sh
 ```
 
 ## Menu cua script
@@ -147,7 +153,7 @@ Dung sau khi da dang ky tren web. Muc nay se tao file relay state va bat service
 
 ### 3. Dang ky truc tiep bang terminal
 
-Dung neu muon bo qua web register. Muc nay tu goi `depinzcash-relay register`, neu thanh cong se luu relay state va bat service. Neu API dang qua tai va tra `429`, script cho 60 giay roi thu lai.
+Dung neu muon bo qua web register. Muc nay tu goi `depinzcash-relay register`, neu thanh cong se luu relay state va bat service. Neu API dang qua tai va tra `429`, script cho 60 giay roi thu lai. Neu API dang tam dong dang ky va tra `403`, script cho 300 giay roi thu lai.
 
 Khong nen retry 1 giay/lần vi no lam rate limit nang hon va co the khien IP bi chan lau hon.
 

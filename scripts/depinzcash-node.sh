@@ -14,6 +14,7 @@ SERVICE_NAME="depinzcash-relay"
 NODE_RPC="${NODE_RPC:-http://127.0.0.1:8232}"
 API_ENDPOINT="${DEPINZCASH_API:-$DEFAULT_API}"
 REGISTER_RETRY_SECS="${REGISTER_RETRY_SECS:-60}"
+REGISTER_FORBIDDEN_RETRY_SECS="${REGISTER_FORBIDDEN_RETRY_SECS:-300}"
 UPDATE_COMMITS_URL="https://github.com/ZcashDePIN/DePINZcash/commits/main/"
 
 if [[ -z "$REPO_DIR" ]]; then
@@ -393,12 +394,16 @@ register_from_terminal() {
     return
   fi
 
-  local label retry_secs attempt log_file
+  local label retry_secs forbidden_retry_secs attempt log_file
   read -r -p "Nhap label node (Enter de dung 'primary'): " label
   label="${label:-primary}"
   retry_secs="$REGISTER_RETRY_SECS"
   if ! [[ "$retry_secs" =~ ^[0-9]+$ ]] || (( retry_secs < 30 )); then
     retry_secs=60
+  fi
+  forbidden_retry_secs="$REGISTER_FORBIDDEN_RETRY_SECS"
+  if ! [[ "$forbidden_retry_secs" =~ ^[0-9]+$ ]] || (( forbidden_retry_secs < 60 )); then
+    forbidden_retry_secs=300
   fi
   attempt=1
   log_file="$(mktemp)"
@@ -406,6 +411,7 @@ register_from_terminal() {
   echo
   echo "Dang ky truc tiep bang depinzcash-relay register."
   echo "Neu API tra 429, script se cho ${retry_secs}s roi thu lai. Bam Ctrl+C de dung."
+  echo "Neu API tra 403 do tam dong dang ky, script se cho ${forbidden_retry_secs}s roi thu lai."
 
   while true; do
     echo
@@ -431,8 +437,11 @@ register_from_terminal() {
     fi
 
     if grep -qi "403 Forbidden\\|\"error\":\"forbidden\"" "$log_file"; then
-      rm -f "$log_file"
-      die "API dang tu choi dang ky (403 Forbidden). Thuong la server dang tat REGISTRATION_ENABLED hoac tam dong dang ky. Dang ky tren web cung se bi loi cho toi khi backend mo lai."
+      echo "API dang tu choi dang ky (403 Forbidden). Co the server dang tat REGISTRATION_ENABLED/tam dong dang ky."
+      echo "Cho ${forbidden_retry_secs}s roi thu lai. Bam Ctrl+C de dung."
+      sleep "$forbidden_retry_secs"
+      attempt=$((attempt + 1))
+      continue
     fi
 
     rm -f "$log_file"

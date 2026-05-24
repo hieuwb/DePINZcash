@@ -8,6 +8,7 @@ INSTALL_DIR="${DEPINZCASH_HOME:-$HOME/.depinzcash}"
 KEYPAIR="$INSTALL_DIR/config/solana-keypair.json"
 API_ENDPOINT="${DEPINZCASH_API:-$DEFAULT_API}"
 REGISTER_RETRY_SECS="${REGISTER_RETRY_SECS:-60}"
+REGISTER_FORBIDDEN_RETRY_SECS="${REGISTER_FORBIDDEN_RETRY_SECS:-300}"
 
 if [[ -z "$REPO_DIR" ]]; then
   SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -258,17 +259,22 @@ register_from_terminal() {
     return
   fi
 
-  local label retry_secs attempt log_file
+  local label retry_secs forbidden_retry_secs attempt log_file
   read -r -p "Nhap label node (Enter de dung node-$NODE_INDEX): " label
   label="${label:-node-$NODE_INDEX}"
   retry_secs="$REGISTER_RETRY_SECS"
   if ! [[ "$retry_secs" =~ ^[0-9]+$ ]] || (( retry_secs < 30 )); then
     retry_secs=60
   fi
+  forbidden_retry_secs="$REGISTER_FORBIDDEN_RETRY_SECS"
+  if ! [[ "$forbidden_retry_secs" =~ ^[0-9]+$ ]] || (( forbidden_retry_secs < 60 )); then
+    forbidden_retry_secs=300
+  fi
   attempt=1
   log_file="$(mktemp)"
 
   echo "Dang ky node $NODE_INDEX bang label '$label'. Bam Ctrl+C de dung."
+  echo "Neu API tra 403 do tam dong dang ky, script se cho ${forbidden_retry_secs}s roi thu lai."
   while true; do
     echo
     echo "Lan thu $attempt..."
@@ -292,8 +298,11 @@ register_from_terminal() {
     fi
 
     if grep -qi "403 Forbidden\\|\"error\":\"forbidden\"" "$log_file"; then
-      rm -f "$log_file"
-      die "API dang tu choi dang ky (403 Forbidden). Thuong la server dang tat REGISTRATION_ENABLED hoac tam dong dang ky. Dang ky tren web cung se bi loi cho toi khi backend mo lai."
+      echo "API dang tu choi dang ky (403 Forbidden). Co the server dang tat REGISTRATION_ENABLED/tam dong dang ky."
+      echo "Cho ${forbidden_retry_secs}s roi thu lai. Bam Ctrl+C de dung."
+      sleep "$forbidden_retry_secs"
+      attempt=$((attempt + 1))
+      continue
     fi
 
     rm -f "$log_file"
