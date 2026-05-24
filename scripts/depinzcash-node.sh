@@ -523,6 +523,131 @@ export_wallet_key() {
   echo "-----END DEPINZCASH SOLANA KEYPAIR-----"
 }
 
+check_node_status() {
+  info "Kiem tra trang thai node."
+
+  echo
+  echo "== Local files =="
+  if [[ -f "$KEYPAIR" ]]; then
+    echo "Keypair: co ($KEYPAIR)"
+    if command_exists python3; then
+      echo "Wallet: $(wallet_public_key)"
+    fi
+  else
+    echo "Keypair: chua co"
+  fi
+
+  local node_id=""
+  if [[ -f "$STATE_FILE" ]]; then
+    echo "Relay state: co ($STATE_FILE)"
+    if command_exists jq; then
+      node_id="$(jq -r '.node_id // empty' "$STATE_FILE")"
+      echo "Node ID: $node_id"
+      echo "API: $(jq -r '.api // empty' "$STATE_FILE")"
+      echo "Label: $(jq -r '.label // empty' "$STATE_FILE")"
+    fi
+  else
+    echo "Relay state: chua co"
+  fi
+
+  echo
+  echo "== Relay service =="
+  if command_exists systemctl; then
+    if systemctl is-active --quiet "$SERVICE_NAME"; then
+      echo "$SERVICE_NAME: active"
+    else
+      echo "$SERVICE_NAME: inactive/failed/not installed"
+    fi
+    systemctl --no-pager --lines=0 status "$SERVICE_NAME" 2>/dev/null || true
+    echo
+    echo "Relay logs gan nhat:"
+    need_sudo journalctl -u "$SERVICE_NAME" -n 20 --no-pager --no-hostname 2>/dev/null || true
+  else
+    echo "systemctl khong co san."
+  fi
+
+  echo
+  echo "== Zebra container =="
+  if command_exists docker; then
+    if docker ps >/dev/null 2>&1; then
+      docker ps -a --filter "name=$ZEBRA_CONTAINER"
+    else
+      need_sudo docker ps -a --filter "name=$ZEBRA_CONTAINER"
+    fi
+    echo
+    echo "Zebra logs gan nhat:"
+    if docker ps >/dev/null 2>&1; then
+      docker logs --tail 30 "$ZEBRA_CONTAINER" 2>/dev/null || true
+    else
+      need_sudo docker logs --tail 30 "$ZEBRA_CONTAINER" 2>/dev/null || true
+    fi
+  else
+    echo "docker chua duoc cai."
+  fi
+
+  echo
+  echo "== Zebra RPC local =="
+  local height_response hash_response
+  height_response="$(curl -s --max-time 10 -H 'Content-Type: application/json' \
+    -d '{"jsonrpc":"1.0","id":"depinzcash-status","method":"getblockcount","params":[]}' \
+    "$NODE_RPC" || true)"
+  hash_response="$(curl -s --max-time 10 -H 'Content-Type: application/json' \
+    -d '{"jsonrpc":"1.0","id":"depinzcash-status","method":"getbestblockhash","params":[]}' \
+    "$NODE_RPC" || true)"
+  if [[ -n "$height_response" ]]; then
+    if command_exists jq; then
+      echo "Local height: $(jq -r '.result // .error // empty' <<<"$height_response")"
+      echo "Best hash: $(jq -r '.result // .error // empty' <<<"$hash_response")"
+    else
+      echo "getblockcount: $height_response"
+      echo "getbestblockhash: $hash_response"
+    fi
+  else
+    echo "Khong ket noi duoc Zebra RPC tai $NODE_RPC"
+  fi
+
+  echo
+  echo "== API node status =="
+  if [[ -z "$node_id" ]]; then
+    echo "Chua co node_id trong relay-state.json, bo qua API node status."
+    return
+  fi
+
+  local node_json proofs_json
+  node_json="$(curl -s --max-time 20 "$API_ENDPOINT/api/nodes/$node_id" || true)"
+  if [[ -z "$node_json" ]]; then
+    echo "Khong goi duoc API node status."
+    return
+  fi
+
+  if command_exists jq; then
+    echo "$node_json" | jq '{
+      id,
+      status,
+      last_height,
+      last_proof_at,
+      points,
+      uptime_seconds,
+      label,
+      rpc_endpoint
+    }'
+    proofs_json="$(curl -s --max-time 20 "$API_ENDPOINT/api/nodes/$node_id/proofs?limit=5" || true)"
+    if [[ -n "$proofs_json" ]]; then
+      echo
+      echo "Proofs gan nhat:"
+      echo "$proofs_json" | jq '.[] | {
+        claimed_height,
+        verdict,
+        points_awarded,
+        received_at,
+        reject_reason
+      }'
+    fi
+  else
+    echo "$node_json"
+  fi
+}
+
 main_menu() {
   while true; do
     clear
@@ -538,6 +663,7 @@ main_menu() {
     echo "4) Xem logs"
     echo "5) Xuat key vi"
     echo "6) Update script/node"
+    echo "7) Kiem tra trang thai node"
     echo "0) Thoat"
     echo
     read -r -p "Chon: " choice
@@ -548,6 +674,7 @@ main_menu() {
       4) show_logs ;;
       5) export_wallet_key; read -r -p "Nhan Enter de quay lai menu..." ;;
       6) update_script_and_node; read -r -p "Nhan Enter de quay lai menu..." ;;
+      7) check_node_status; read -r -p "Nhan Enter de quay lai menu..." ;;
       0) exit 0 ;;
       *) echo "Lua chon khong hop le."; sleep 1 ;;
     esac

@@ -132,6 +132,7 @@ REGISTER_RETRY_SECS=120 ./scripts/depinzcash-node.sh
 4) Xem logs
 5) Xuat key vi
 6) Update script/node
+7) Kiem tra trang thai node
 0) Thoat
 ```
 
@@ -201,6 +202,20 @@ Link xem commits moi:
 ```text
 https://github.com/ZcashDePIN/DePINZcash/commits/main/
 ```
+
+### 7. Kiem tra trang thai node
+
+Dung de xem nhanh cac thong tin quan trong:
+
+- Keypair va wallet local.
+- `relay-state.json`, Node ID, API, label.
+- Trang thai service `depinzcash-relay` va logs gan nhat.
+- Trang thai Zebra Docker container va logs gan nhat.
+- Zebra RPC local: `getblockcount`, `getbestblockhash`.
+- API node status: `status`, `last_height`, `last_proof_at`, `points`, `uptime_seconds`.
+- 5 proof gan nhat va ly do reject neu co.
+
+Neu status tren API la `stale` nhung proof gan nhat van `accepted`, thuong la backend/API cap nhat cham hoac node dang sync cham. Kiem tra them logs relay va Zebra trong cung man hinh nay.
 
 ## Cac lenh kiem tra huu ich
 
