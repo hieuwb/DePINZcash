@@ -43,7 +43,11 @@ struct KeygenArgs {
 struct RegisterArgs {
     #[arg(long, env = "DEPINZCASH_API", default_value = "http://localhost:3000")]
     api: String,
-    #[arg(long, env = "SOLANA_KEYPAIR", default_value = "config/solana-keypair.json")]
+    #[arg(
+        long,
+        env = "SOLANA_KEYPAIR",
+        default_value = "config/solana-keypair.json"
+    )]
     keypair: PathBuf,
     #[arg(long, default_value = "zebra-full")]
     kind: String,
@@ -60,7 +64,11 @@ struct RegisterArgs {
 struct SubmitArgs {
     #[arg(long, env = "DEPINZCASH_API", default_value = "http://localhost:3000")]
     api: String,
-    #[arg(long, env = "SOLANA_KEYPAIR", default_value = "config/solana-keypair.json")]
+    #[arg(
+        long,
+        env = "SOLANA_KEYPAIR",
+        default_value = "config/solana-keypair.json"
+    )]
     keypair: PathBuf,
     #[arg(long, default_value = "config/relay-state.json")]
     state: PathBuf,
@@ -132,7 +140,10 @@ async fn main() -> Result<()> {
 
 fn keygen(args: KeygenArgs) -> Result<()> {
     if args.out.exists() {
-        return Err(anyhow!("refusing to overwrite existing keypair at {:?}", args.out));
+        return Err(anyhow!(
+            "refusing to overwrite existing keypair at {:?}",
+            args.out
+        ));
     }
     if let Some(parent) = args.out.parent() {
         fs::create_dir_all(parent)?;
@@ -148,7 +159,10 @@ fn keygen(args: KeygenArgs) -> Result<()> {
     };
     fs::write(&args.out, serde_json::to_vec_pretty(&file)?)?;
     println!("wrote keypair to {:?}", args.out);
-    println!("wallet (public key): {}", bs58::encode(sk.verifying_key().to_bytes()).into_string());
+    println!(
+        "wallet (public key): {}",
+        bs58::encode(sk.verifying_key().to_bytes()).into_string()
+    );
     Ok(())
 }
 
@@ -174,7 +188,14 @@ async fn register(args: RegisterArgs) -> Result<()> {
 
     // Server's registration_message must match exactly.
     let label = args.label.clone();
-    let msg = registration_message(&wallet, &nonce, &ts.to_rfc3339(), &args.kind, "mainnet", &label);
+    let msg = registration_message(
+        &wallet,
+        &nonce,
+        &ts.to_rfc3339(),
+        &args.kind,
+        "mainnet",
+        &label,
+    );
     let sig = sign_b58(&sk, &msg);
 
     let body = json!({
@@ -198,8 +219,14 @@ async fn register(args: RegisterArgs) -> Result<()> {
         return Err(anyhow!("register failed ({}): {}", status, text));
     }
     let v: serde_json::Value = serde_json::from_str(&text)?;
-    let node_id = v["node"]["id"].as_str().ok_or_else(|| anyhow!("missing node.id"))?.to_string();
-    let auth_token = v["auth_token"].as_str().ok_or_else(|| anyhow!("missing auth_token"))?.to_string();
+    let node_id = v["node"]["id"]
+        .as_str()
+        .ok_or_else(|| anyhow!("missing node.id"))?
+        .to_string();
+    let auth_token = v["auth_token"]
+        .as_str()
+        .ok_or_else(|| anyhow!("missing auth_token"))?
+        .to_string();
 
     let state = RelayState {
         api: args.api.clone(),
@@ -234,8 +261,19 @@ async fn submit_once(args: &SubmitArgs) -> Result<serde_json::Value> {
         ));
     }
 
+    let inferred_uptime_seconds = if args.uptime_seconds == 0 {
+        Utc::now()
+            .signed_duration_since(state.registered_at)
+            .num_seconds()
+            .max(0) as u64
+    } else {
+        args.uptime_seconds
+    };
+
     let (height, block_hash, uptime, peers, binary_hash) =
-        gather_metrics(args).await.context("gathering metrics")?;
+        gather_metrics(args, inferred_uptime_seconds)
+            .await
+            .context("gathering metrics")?;
 
     let nonce = random_nonce();
     let proof_ts = Utc::now();
@@ -274,10 +312,14 @@ async fn submit_once(args: &SubmitArgs) -> Result<serde_json::Value> {
     }
     let v: serde_json::Value = serde_json::from_str(&text)?;
     println!(
-        "submitted height={} verdict={} points={}",
+        "submitted height={} uptime={} peers={} verdict={} points={}",
         height,
+        uptime,
+        peers,
         v.get("verdict").and_then(|x| x.as_str()).unwrap_or("?"),
-        v.get("points_awarded").and_then(|x| x.as_u64()).unwrap_or(0)
+        v.get("points_awarded")
+            .and_then(|x| x.as_u64())
+            .unwrap_or(0)
     );
     Ok(v)
 }
@@ -294,11 +336,28 @@ async fn watch(args: WatchArgs) -> Result<()> {
     }
 }
 
-async fn gather_metrics(args: &SubmitArgs) -> Result<(u64, String, u64, u32, Option<String>)> {
+async fn gather_metrics(
+    args: &SubmitArgs,
+    inferred_uptime_seconds: u64,
+) -> Result<(u64, String, u64, u32, Option<String>)> {
     // 1. live Zebra RPC has highest precedence — every tick reflects the current tip.
     if let Some(rpc_url) = &args.node_rpc {
         let (height, block_hash) = query_zebra_tip(rpc_url).await?;
-        return Ok((height, block_hash, args.uptime_seconds, args.peers, args.binary_hash.clone()));
+        let peers = if args.peers == 0 {
+            query_zebra_peer_count(rpc_url).await.unwrap_or_else(|e| {
+                tracing::warn!(error = ?e, "zebra peer count unavailable; using peers=0");
+                0
+            })
+        } else {
+            args.peers
+        };
+        return Ok((
+            height,
+            block_hash,
+            inferred_uptime_seconds,
+            peers,
+            args.binary_hash.clone(),
+        ));
     }
     if let Some(path) = &args.proof_file {
         let bytes = fs::read(path).with_context(|| format!("reading proof file {:?}", path))?;
@@ -309,23 +368,36 @@ async fn gather_metrics(args: &SubmitArgs) -> Result<(u64, String, u64, u32, Opt
         let block_hash = v["metrics"]["block_hash"]
             .as_str()
             .map(|s| s.to_string())
-            .or_else(|| v["public_inputs"].as_array()
-                .and_then(|arr| arr.first()).and_then(|x| x.as_str()).map(String::from))
+            .or_else(|| {
+                v["public_inputs"]
+                    .as_array()
+                    .and_then(|arr| arr.first())
+                    .and_then(|x| x.as_str())
+                    .map(String::from)
+            })
             .ok_or_else(|| anyhow!("proof file missing block hash"))?;
         let uptime_hours = v["metrics"]["uptime_hours"].as_f64().unwrap_or(0.0);
         let uptime_seconds = (uptime_hours * 3600.0) as u64;
         let peers = v["metrics"]["peer_count"].as_u64().unwrap_or(0) as u32;
-        let binary_hash = v["node_info"]["zebra_binary_hash"].as_str().map(String::from);
+        let binary_hash = v["node_info"]["zebra_binary_hash"]
+            .as_str()
+            .map(String::from);
         Ok((height, block_hash, uptime_seconds, peers, binary_hash))
     } else {
-        let height = args
-            .height
-            .ok_or_else(|| anyhow!("provide --node-rpc, --proof-file, or --height + --block-hash"))?;
+        let height = args.height.ok_or_else(|| {
+            anyhow!("provide --node-rpc, --proof-file, or --height + --block-hash")
+        })?;
         let block_hash = args
             .block_hash
             .clone()
             .ok_or_else(|| anyhow!("--block-hash required when --proof-file is absent"))?;
-        Ok((height, block_hash, args.uptime_seconds, args.peers, args.binary_hash.clone()))
+        Ok((
+            height,
+            block_hash,
+            inferred_uptime_seconds,
+            args.peers,
+            args.binary_hash.clone(),
+        ))
     }
 }
 
@@ -335,15 +407,29 @@ async fn query_zebra_tip(rpc_url: &str) -> Result<(u64, String)> {
         .timeout(Duration::from_secs(5))
         .build()?;
 
-    let height: u64 = rpc_call(&client, rpc_url, "getblockcount", json!([])).await?
+    let height: u64 = rpc_call(&client, rpc_url, "getblockcount", json!([]))
+        .await?
         .as_u64()
         .ok_or_else(|| anyhow!("getblockcount: result is not a number"))?;
-    let hash: String = rpc_call(&client, rpc_url, "getbestblockhash", json!([])).await?
+    let hash: String = rpc_call(&client, rpc_url, "getbestblockhash", json!([]))
+        .await?
         .as_str()
         .map(String::from)
         .ok_or_else(|| anyhow!("getbestblockhash: result is not a string"))?;
 
     Ok((height, hash))
+}
+
+async fn query_zebra_peer_count(rpc_url: &str) -> Result<u32> {
+    let client = reqwest::Client::builder()
+        .timeout(Duration::from_secs(5))
+        .build()?;
+    let peers = rpc_call(&client, rpc_url, "getpeerinfo", json!([])).await?;
+    let count = peers
+        .as_array()
+        .ok_or_else(|| anyhow!("getpeerinfo: result is not an array"))?
+        .len();
+    Ok(count.min(u32::MAX as usize) as u32)
 }
 
 async fn rpc_call(
@@ -352,7 +438,8 @@ async fn rpc_call(
     method: &str,
     params: serde_json::Value,
 ) -> Result<serde_json::Value> {
-    let body = json!({"jsonrpc": "1.0", "id": "depinzcash-relay", "method": method, "params": params});
+    let body =
+        json!({"jsonrpc": "1.0", "id": "depinzcash-relay", "method": method, "params": params});
     let resp = client
         .post(url)
         .json(&body)

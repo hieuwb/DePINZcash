@@ -253,6 +253,37 @@ Khi dang ky node phu, dung cung wallet nhung label phai khac node cu, vi du `hie
 
 Luu y: node phu tren cung VPS phai dung port khac `8232/8233` de khong dung node chinh. P2P port khac `8233` van sync duoc bang outbound peers, nhung inbound peers co the it hon node chinh.
 
+## Diem moi proof
+
+Relay tu dong gui them:
+
+- `uptime_seconds`: tinh tu `registered_at` trong `relay-state.json` neu ban khong truyen thu cong.
+- `peers`: dem tu Zebra RPC `getpeerinfo`.
+
+Voi Zebra full node, diem proof toi da hien tai la:
+
+```text
+60 base + 24 uptime bonus + 3 peers bonus = 87
+```
+
+Dieu kien de dat 87:
+
+- Proof duoc accepted.
+- Uptime tu 24 gio tro len.
+- Peer count tu 12 tro len.
+
+Xem log relay de kiem tra:
+
+```bash
+sudo journalctl -u depinzcash-relay -f
+```
+
+Vi du log dung:
+
+```text
+submitted height=... uptime=... peers=... verdict=accepted points=87
+```
+
 ## Cac lenh kiem tra huu ich
 
 Kiem tra Zebra container:
