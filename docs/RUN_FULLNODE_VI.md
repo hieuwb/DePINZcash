@@ -151,6 +151,14 @@ Dung de cai moi hoac khoi dong lai setup. Neu keypair da ton tai, script se giu 
 
 Dung sau khi da dang ky tren web. Muc nay se tao file relay state va bat service `depinzcash-relay` de gui proof moi 5 phut.
 
+Mac dinh relay gui proof moi 300 giay. Co the doi interval truoc khi chay script:
+
+```bash
+RELAY_INTERVAL_SECS=60 ./scripts/depinzcash-node.sh
+```
+
+Sau do chon lai muc `2) Nhap Node ID va Auth Token` neu da co `relay-state.json`, script se cap nhat service va restart relay voi interval moi.
+
 ### 3. Dang ky truc tiep bang terminal
 
 Dung neu muon bo qua web register. Muc nay tu goi `depinzcash-relay register`, neu thanh cong se luu relay state va bat service. Neu API dang qua tai va tra `429`, script cho 60 giay roi thu lai. Neu API dang tam dong dang ky va tra `403`, script cho 300 giay roi thu lai.
@@ -341,6 +349,7 @@ curl -s -H 'Content-Type: application/json' \
 - Neu xoa volume Docker `zebra-state`, Zebra se phai sync lai tu dau.
 - Neu xoa keypair, node moi se dung vi moi va khong trung voi vi da dung tren web truoc do.
 - Neu repo co thay doi local, muc update se canh bao truoc khi pull.
+- Khong nen dat `RELAY_INTERVAL_SECS` qua thap. Neu Zebra chua nhay block moi, relay se gap `409 Conflict` vi proof cung height/hash da gui roi. Gui qua nhanh cung lam API bi tai/rate limit.
 
 ## Cau hinh nang cao
 

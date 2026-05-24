@@ -15,6 +15,7 @@ NODE_RPC="${NODE_RPC:-http://127.0.0.1:8232}"
 API_ENDPOINT="${DEPINZCASH_API:-$DEFAULT_API}"
 REGISTER_RETRY_SECS="${REGISTER_RETRY_SECS:-60}"
 REGISTER_FORBIDDEN_RETRY_SECS="${REGISTER_FORBIDDEN_RETRY_SECS:-300}"
+RELAY_INTERVAL_SECS="${RELAY_INTERVAL_SECS:-300}"
 UPDATE_COMMITS_URL="https://github.com/ZcashDePIN/DePINZcash/commits/main/"
 
 if [[ -z "$REPO_DIR" ]]; then
@@ -312,6 +313,11 @@ install_systemd_service() {
   local relay_bin="$REPO_DIR/prover/target/release/depinzcash-relay"
   local service_file="/etc/systemd/system/$SERVICE_NAME.service"
   local user_line=""
+  local interval_secs="$RELAY_INTERVAL_SECS"
+
+  if ! [[ "$interval_secs" =~ ^[0-9]+$ ]] || (( interval_secs < 15 )); then
+    interval_secs=300
+  fi
 
   if [[ "$REAL_USER" != "root" ]]; then
     user_line="User=$REAL_USER
@@ -332,7 +338,7 @@ $user_line
 WorkingDirectory=$REPO_DIR
 Environment=RUST_LOG=info
 Environment=DEPINZCASH_API=$API_ENDPOINT
-ExecStart=$relay_bin watch --interval-secs 300 --api $API_ENDPOINT --keypair $KEYPAIR --state $STATE_FILE --node-rpc $NODE_RPC
+ExecStart=$relay_bin watch --interval-secs $interval_secs --api $API_ENDPOINT --keypair $KEYPAIR --state $STATE_FILE --node-rpc $NODE_RPC
 Restart=always
 RestartSec=20
 
@@ -344,6 +350,7 @@ EOF
   rm -f "$tmp"
   need_sudo systemctl daemon-reload
   need_sudo systemctl enable --now "$SERVICE_NAME"
+  need_sudo systemctl restart "$SERVICE_NAME"
 }
 
 configure_relay_from_web() {
@@ -355,7 +362,7 @@ configure_relay_from_web() {
   if [[ -f "$STATE_FILE" ]]; then
     info "Relay state da ton tai: $STATE_FILE"
     install_systemd_service
-    info "Relay da duoc bat lai va se gui proof moi 5 phut."
+    info "Relay da duoc bat lai voi interval ${RELAY_INTERVAL_SECS}s."
     return
   fi
 
@@ -390,7 +397,7 @@ register_from_terminal() {
   if [[ -f "$STATE_FILE" ]]; then
     info "Relay state da ton tai: $STATE_FILE"
     install_systemd_service
-    info "Relay da duoc bat lai va se gui proof moi 5 phut."
+    info "Relay da duoc bat lai voi interval ${RELAY_INTERVAL_SECS}s."
     return
   fi
 
